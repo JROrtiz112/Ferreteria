@@ -17,6 +17,15 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 CREATE SCHEMA IF NOT EXISTS `ferreteria` DEFAULT CHARACTER SET utf8 ;
 USE `ferreteria` ;
 
+#Actulizacion 24/11/2016
+CREATE TABLE IF NOT EXISTS `ferreteria`.`compania`(
+  `idCompania` INT NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(100) NOT NULL,
+  PRIMARY KEY(`idCompania`)
+)
+ENGINE = InnoDB;
+#---------------------------------------------------
+
 -- -----------------------------------------------------
 -- Table `ferreteria`.`amonestaciones`
 -- -----------------------------------------------------
@@ -39,12 +48,35 @@ DROP TABLE IF EXISTS `ferreteria`.`sedes` ;
 CREATE TABLE IF NOT EXISTS `ferreteria`.`sedes` (
   `idSede` INT(11) NOT NULL AUTO_INCREMENT,
   `nombre` VARCHAR(100) NOT NULL,
-  `ubicacion` POLYGON NOT NULL,
+  `ubicacion` POINT NOT NULL,
   PRIMARY KEY (`idSede`))
 ENGINE = InnoDB
-AUTO_INCREMENT = 3
 DEFAULT CHARACTER SET = utf8;
 
+-- -----------------------------------------------------
+-- Table `ferreteria`.`usuarios`
+-- -----------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `ferreteria`.`usuarios`(
+  `idUsuario` INT NOT NULL AUTO_INCREMENT,
+  `nombreUsuario` VARCHAR(100) NOT NULL,
+  `contrasenaUsuario` VARCHAR(100) NOT NULL,
+  `idCliente` INT NULL DEFAULT NULL,
+  `admin` BOOLEAN NOT NULL, #Boolean para determinar si es admin o no
+  PRIMARY KEY(`idUsuario`)
+)
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `ferreteria`.`tipoempleado`
+-- -----------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `ferreteria`.`tipoempleado`(
+  `idTipoEmpleado` INT NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(50) NOT NULL,
+  PRIMARY KEY(`idTipoEmpleado`)
+)
+ENGINE = InnoDB;
 
 -- -----------------------------------------------------
 -- Table `ferreteria`.`planillas`
@@ -57,12 +89,13 @@ CREATE TABLE IF NOT EXISTS `ferreteria`.`planillas` (
   `apellidoP` VARCHAR(50) NOT NULL,
   `apellidoM` VARCHAR(50) NOT NULL,
   `idSede` INT(11) NOT NULL,
+  `idTipoEmpleado` INT NOT NULL,
   `fechaContratado` DATE NOT NULL,
   `estado` INT(11) NOT NULL,
   PRIMARY KEY (`cedula`),
-  CONSTRAINT `planillas_ibfk_1`
-    FOREIGN KEY (`idSede`)
-    REFERENCES `ferreteria`.`sedes` (`idSede`))
+  FOREIGN KEY (`idSede`) REFERENCES `ferreteria`.`sedes` (`idSede`),
+  FOREIGN KEY(`idTipoEmpleado`) REFERENCES `ferreteria`.`tipoempleado`(`idTipoEmpleado`)
+)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 
@@ -128,9 +161,11 @@ DROP TABLE IF EXISTS `ferreteria`.`productos` ;
 
 CREATE TABLE IF NOT EXISTS `ferreteria`.`productos` (
   `idProducto` INT(11) NOT NULL AUTO_INCREMENT,
+  `codigoProducto` VARCHAR(50) NOT NULL,
   `nombre` VARCHAR(50) NOT NULL,
   `descripcion` VARCHAR(100) NULL DEFAULT NULL,
   `utilidad` VARCHAR(50) NULL DEFAULT NULL,
+  `aspectosTecnicos` TEXT NULL DEFAULT NULL,
   `precio` DOUBLE NOT NULL,
   `precioVenta` DOUBLE NOT NULL,
   `idMarca` INT(11) NOT NULL,
@@ -181,6 +216,7 @@ CREATE TABLE IF NOT EXISTS `ferreteria`.`clientes` (
   `apellidoM` VARCHAR(50) NOT NULL,
   `correo` VARCHAR(100) NOT NULL,
   `numero` VARCHAR(9) NOT NULL,
+  `ubicacion` POINT NOT NULL,
   PRIMARY KEY (`cedula`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
@@ -229,42 +265,43 @@ DROP TABLE IF EXISTS `ferreteria`.`departamentos` ;
 
 CREATE TABLE IF NOT EXISTS `ferreteria`.`departamentos` (
   `idDepartamento` INT(11) NOT NULL AUTO_INCREMENT,
-  `nombre` VARCHAR(50) NOT NULL,
-  PRIMARY KEY (`idDepartamento`))
-ENGINE = InnoDB
-AUTO_INCREMENT = 3
-DEFAULT CHARACTER SET = utf8;
-
-
--- -----------------------------------------------------
--- Table `ferreteria`.`departamentosxsedes`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `ferreteria`.`departamentosxsedes` ;
-
-CREATE TABLE IF NOT EXISTS `ferreteria`.`departamentosxsedes` (
-  `idDxS` INT(11) NOT NULL AUTO_INCREMENT,
   `idSede` INT(11) NOT NULL,
-  `idDepartamento` INT(11) NOT NULL,
-  `cedula` INT(11) NOT NULL,
-  PRIMARY KEY (`idDxS`),
-  CONSTRAINT `departamentosxsedes_ibfk_1`
-    FOREIGN KEY (`idSede`)
-    REFERENCES `ferreteria`.`sedes` (`idSede`),
-  CONSTRAINT `departamentosxsedes_ibfk_2`
-    FOREIGN KEY (`idDepartamento`)
-    REFERENCES `ferreteria`.`departamentos` (`idDepartamento`),
-  CONSTRAINT `departamentosxsedes_ibfk_3`
-    FOREIGN KEY (`cedula`)
-    REFERENCES `ferreteria`.`planillas` (`cedula`))
+  `nombre` VARCHAR(50) NOT NULL,
+  `cedEmpleado` INT(11) NULL DEFAULT NULL,
+  PRIMARY KEY (`idDepartamento`),
+  FOREIGN KEY (`idSede`) REFERENCES `ferreteria`.`sedes` (`idSede`),
+  FOREIGN KEY (`cedEmpleado`) REFERENCES `ferreteria`.`planillas` (`cedula`)
+)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 
-CREATE INDEX `idSede` ON `ferreteria`.`departamentosxsedes` (`idSede` ASC);
+-- -----------------------------------------------------
+-- Table `ferreteria`.`pasillos`
+-- -----------------------------------------------------
 
-CREATE INDEX `idDepartamento` ON `ferreteria`.`departamentosxsedes` (`idDepartamento` ASC);
+CREATE TABLE IF NOT EXISTS `ferreteria`.`pasillos`(
+	`idPasillo` INT NOT NULL AUTO_INCREMENT,
+    `idDepartamento` INT(11) NOT NULL,
+	`numero` INT NOT NULL,
+	`nombre` VARCHAR(60),
+	PRIMARY KEY(`idPasillo`),
+    FOREIGN KEY (`idDepartamento`) REFERENCES `ferreteria`.`departamentos` (`idDepartamento`)
+)
+ENGINE = InnoDB;
 
-CREATE INDEX `cedula` ON `ferreteria`.`departamentosxsedes` (`cedula` ASC);
+-- -----------------------------------------------------
+-- Table `ferreteria`.`estantes`
+-- -----------------------------------------------------
 
+CREATE TABLE IF NOT EXISTS `ferreteria`.`estantes`(
+	`idEstante` INT NOT NULL AUTO_INCREMENT,
+    `idPasillo` INT NOT NULL,
+    `cantidadEstantes` INT,
+	`pisos` INT,
+	PRIMARY KEY(`idEstante`),
+    FOREIGN KEY (`idPasillo`) REFERENCES `ferreteria`.`pasillos` (`idPasillo`)
+)
+ENGINE = InnoDB;
 
 -- -----------------------------------------------------
 -- Table `ferreteria`.`pedidos`
@@ -276,14 +313,14 @@ CREATE TABLE IF NOT EXISTS `ferreteria`.`pedidos` (
   `fechaPedido` DATE NOT NULL,
   `cedCliente` INT(11) NOT NULL,
   `cedEmpleado` INT(11) NOT NULL,
+  `idSede` INT NOT NULL,
   `aprobado` BIT(1) NOT NULL,
   PRIMARY KEY (`idPedido`),
-  CONSTRAINT `pedidos_ibfk_1`
-    FOREIGN KEY (`cedCliente`)
+  FOREIGN KEY (`cedCliente`)
     REFERENCES `ferreteria`.`clientes` (`cedula`),
-  CONSTRAINT `pedidos_ibfk_2`
-    FOREIGN KEY (`cedEmpleado`)
-    REFERENCES `ferreteria`.`planillas` (`cedula`))
+  FOREIGN KEY (`cedEmpleado`)
+    REFERENCES `ferreteria`.`planillas` (`cedula`),
+    FOREIGN KEY(`idSede`) REFERENCES `ferreteria`.`sedes`(`idSede`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 
@@ -291,32 +328,38 @@ CREATE INDEX `cedCliente` ON `ferreteria`.`pedidos` (`cedCliente` ASC);
 
 CREATE INDEX `cedEmpleado` ON `ferreteria`.`pedidos` (`cedEmpleado` ASC);
 
-
 -- -----------------------------------------------------
--- Table `ferreteria`.`envios`
+-- Table `ferreteria`.`facturas`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `ferreteria`.`envios` ;
+DROP TABLE IF EXISTS `ferreteria`.`facturas` ;
 
-CREATE TABLE IF NOT EXISTS `ferreteria`.`envios` (
-  `idEnvio` INT(11) NOT NULL AUTO_INCREMENT,
-  `idSede` INT(11) NOT NULL,
-  `destino` POLYGON NOT NULL,
+CREATE TABLE IF NOT EXISTS `ferreteria`.`facturas` (
+  `idFactura` INT(11) NOT NULL AUTO_INCREMENT,
+  `fechaFactura` DATE NOT NULL,
+  `cedCliente` INT(11) NOT NULL,
   `idPedido` INT(11) NOT NULL,
-  `kmRecorrido` INT(11) NULL DEFAULT NULL,
-  PRIMARY KEY (`idEnvio`),
-  CONSTRAINT `envios_ibfk_1`
-    FOREIGN KEY (`idSede`)
-    REFERENCES `ferreteria`.`sedes` (`idSede`),
-  CONSTRAINT `envios_ibfk_2`
-    FOREIGN KEY (`idPedido`)
-    REFERENCES `ferreteria`.`pedidos` (`idPedido`))
+  `detalleFactura` TEXT NOT NULL,
+  `montoTotal` DOUBLE PRECISION NOT NULL,
+  PRIMARY KEY (`idFactura`),
+  FOREIGN KEY (`cedCliente`) REFERENCES `ferreteria`.`clientes` (`cedula`),
+  FOREIGN KEY (`idPedido`) REFERENCES `ferreteria`.`pedidos` (`idPedido`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 
-CREATE INDEX `idSede` ON `ferreteria`.`envios` (`idSede` ASC);
+-- -----------------------------------------------------
+-- Table `ferreteria`.`cobrofacturas`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `ferreteria`.`cobrofacturas` ;
 
-CREATE INDEX `idPedido` ON `ferreteria`.`envios` (`idPedido` ASC);
-
+CREATE TABLE IF NOT EXISTS `ferreteria`.`cobrofacturas` (
+  `idCobroFactura` INT(11) NOT NULL AUTO_INCREMENT,
+  `fechaCobro` DATE NOT NULL,
+  `idFactura` INT(11) NOT NULL,
+  `numeroTarjetaCliente` INT(11) NOT NULL,
+  PRIMARY KEY (`idCobroFactura`),
+  FOREIGN KEY (`idFactura`) REFERENCES `ferreteria`.`facturas` (`idFactura`))
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
 
 -- -----------------------------------------------------
 -- Table `ferreteria`.`imagenes`
@@ -343,27 +386,16 @@ CREATE INDEX `idProducto` ON `ferreteria`.`imagenes` (`idProducto` ASC);
 DROP TABLE IF EXISTS `ferreteria`.`inventariosxsedes` ;
 
 CREATE TABLE IF NOT EXISTS `ferreteria`.`inventariosxsedes` (
-  `idIxS` INT(11) NOT NULL AUTO_INCREMENT,
-  `idProducto` INT(11) NOT NULL,
-  `idSede` INT(11) NOT NULL,
-  `idDepartamento` INT NOT NULL,
-  `cantidad` INT(11) NOT NULL,
-  `pasillo` INT(11) NOT NULL,
-  `estante` INT(11) NOT NULL,
-  PRIMARY KEY (`idIxS`),
-  CONSTRAINT `inventariosxsedes_ibfk_1`
-    FOREIGN KEY (`idProducto`)
-    REFERENCES `ferreteria`.`productos` (`idProducto`),
-  CONSTRAINT `inventariosxsedes_ibfk_2`
-    FOREIGN KEY (`idSede`)
-    REFERENCES `ferreteria`.`sedes` (`idSede`))
+	`idIxS` INT NOT NULL AUTO_INCREMENT,
+	`idProducto` INT NOT NULL,
+	`idPasillo` INT NOT NULL,
+	`cantidad` INT NOT NULL,
+	PRIMARY KEY(`idIxS`),
+	FOREIGN KEY(`idProducto`) REFERENCES `ferreteria`.`productos`(`idProducto`),
+	FOREIGN KEY(`idPasillo`) REFERENCES `ferreteria`.`pasillos`(`idPasillo`)
+)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
-
-CREATE INDEX `idProducto` ON `ferreteria`.`inventariosxsedes` (`idProducto` ASC);
-
-CREATE INDEX `idSede` ON `ferreteria`.`inventariosxsedes` (`idSede` ASC);
-
 
 -- -----------------------------------------------------
 -- Table `ferreteria`.`mensajes`
@@ -426,8 +458,9 @@ DROP TABLE IF EXISTS `ferreteria`.`vacacionesxempleado` ;
 CREATE TABLE IF NOT EXISTS `ferreteria`.`vacacionesxempleado` (
   `idVxE` INT(11) NOT NULL AUTO_INCREMENT,
   `cedEmpleado` INT(11) NOT NULL,
-  `fechaSalida` DATE NOT NULL,
-  `fechaRegreso` DATE NOT NULL,
+  `diasVacaciones` INT NOT NULL,
+  `fechaSalida` DATE NULL DEFAULT NULL,
+  `fechaRegreso` DATE NULL DEFAULT NULL,
   PRIMARY KEY (`idVxE`),
   CONSTRAINT `vacacionesxempleado_ibfk_1`
     FOREIGN KEY (`cedEmpleado`)
@@ -438,6 +471,106 @@ DEFAULT CHARACTER SET = utf8;
 CREATE INDEX `cedEmpleado` ON `ferreteria`.`vacacionesxempleado` (`cedEmpleado` ASC);
 
 USE `ferreteria` ;
+
+# Ultima actualizacion 24/11/2016
+
+CREATE TABLE IF NOT EXISTS `ferreteria`.`marcascarros`(
+  `idMarcaCarro` INT NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(50),
+  PRIMARY KEY(`idMarcaCarro`)
+)
+ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS `ferreteria`.`modelocarros`(
+  `idModelo` INT NOT NULL AUTO_INCREMENT,
+  `idMarcaCarro` INT NOT NULL,
+  `nombre` VARCHAR(50),
+  PRIMARY KEY(`idModelo`),
+  FOREIGN KEY(`idMarcaCarro`) REFERENCES `ferreteria`.`MarcasCarros`(`idMarcaCarro`)
+)
+ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS `ferreteria`.`flotilla`(
+  `placa` VARCHAR(6) NOT NULL,
+  `idModelo` INT NOT NULL,
+  `anno` INT NOT NULL,
+  `cedula` INT NULL DEFAULT NULL, #El chofer del vehiculo
+  `consumoXkm` DOUBLE PRECISION NOT NULL,
+  PRIMARY KEY(`placa`),
+  FOREIGN KEY(`idModelo`) REFERENCES `ferreteria`.`modelocarros`(`idModelo`),
+  FOREIGN KEY(`cedula`) REFERENCES `ferreteria`.`planillas`(`cedula`)
+)
+ENGINE = InnoDB;
+#------------------------------------------------------------------------------------------
+
+-- -----------------------------------------------------
+-- Table `ferreteria`.`rutas`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ferreteria`.`rutas`(
+  `idRuta` INT NOT NULL AUTO_INCREMENT,
+  `idSede` INT NOT NULL,
+  `puntoLlegada` POINT NOT NULL,
+  PRIMARY KEY(`idRuta`),
+  FOREIGN KEY(`idSede`) REFERENCES `ferreteria`.`sedes`(`idSede`)
+)
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `ferreteria`.`envios`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `ferreteria`.`envios` ;
+
+CREATE TABLE IF NOT EXISTS `ferreteria`.`envios` (
+  `idEnvio` INT NOT NULL AUTO_INCREMENT,
+  `idSede` INT NOT NULL,
+  `destino` POINT NOT NULL,
+  `idPedido` INT NOT NULL,
+  `fechaEnvio` DATE NOT NULL,
+  `cantidadEnviada` INT NOT NULL,
+  `vistoBueno` INT NOT NULL, # 0-> no hay visto, 1 -> pedido completa, 2 -> faltante pedido
+  #`kmRecorrido` INT(11) NULL DEFAULT NULL,
+  PRIMARY KEY (`idEnvio`),
+  CONSTRAINT `envios_ibfk_1`
+    FOREIGN KEY (`idSede`)
+    REFERENCES `ferreteria`.`sedes` (`idSede`),
+  CONSTRAINT `envios_ibfk_2`
+    FOREIGN KEY (`idPedido`)
+    REFERENCES `ferreteria`.`pedidos` (`idPedido`))
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
+
+CREATE INDEX `idSede` ON `ferreteria`.`envios` (`idSede` ASC);
+
+CREATE INDEX `idPedido` ON `ferreteria`.`envios` (`idPedido` ASC);
+
+-- -----------------------------------------------------
+-- Table `ferreteria`.`ordenDespachos`
+-- -----------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `ferreteria`.`ordenDespachos`(
+  `idOrdenDespacho` INT NOT NULL AUTO_INCREMENT,
+  `idRuta` INT NOT NULL,
+  `fecha` DATE NOT NULL,
+  `cedEmpleado` INT NOT NULL,
+  PRIMARY KEY(`idOrdenDespacho`),
+  FOREIGN KEY(`idRuta`) REFERENCES `ferreteria`.`rutas`(`idRuta`),
+  FOREIGN KEY(`cedEmpleado`) REFERENCES `ferreteria`.`planillas`(`cedula`)
+)
+ENGINE = InnoDB; 
+
+-- -----------------------------------------------------
+-- Table `ferreteria`.`enviosXordenDespacho`
+-- -----------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `ferreteria`.`enviosXordenDespacho`(
+  `idExOd` INT NOT NULL AUTO_INCREMENT,
+  `idOrdenDespacho` INT NOT NULL,
+  `idEnvio` INT NOT NULL,
+  PRIMARY KEY(`idExOd`),
+  FOREIGN KEY(`idOrdenDespacho`) REFERENCES `ferreteria`.`ordenDespachos`(`idOrdenDespacho`),
+  FOREIGN KEY(`idEnvio`) REFERENCES `ferreteria`.`envios`(`idEnvio`)
+)
+ENGINE = InnoDB;
 
 -- -----------------------------------------------------
 -- procedure usp_InsertarAmonestaciones
@@ -467,6 +600,127 @@ BEGIN
         SIGNAL SQLSTATE '45000';
 		SET msgError = 'La Amonestacion que desea ingresar ya se encuentra en el sistema.';
 	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarAmonestaciones
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarAmonestaciones`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarAmonestaciones`(
+	idAmonestacion INT,
+	nuevotipo VARCHAR(50),
+    nuevodiasSuspendido INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE tipo VARCHAR(50);
+    DECLARE diasSuspendido INT;
+    
+    SET tipo = (SELECT amonestaciones.tipo FROM amonestaciones WHERE amonestaciones.idAmonestacion = idAmonestacion);
+    SET diasSuspendido = (SELECT amonestaciones.diasSuspendido FROM amonestaciones WHERE amonestaciones.idAmonestacion = idAmonestacion);
+    
+    SET nuevotipo = IFNULL(neuvotipo, tipo);
+    SET nuevodiasSuspendido = IFNULL(nuevodiasSuspendido, diasSuspendido);
+    
+	IF EXISTS(SELECT amonestaciones.tipo FROM amonestaciones 
+			  WHERE amonestaciones.idAmonestacion = idAmonestacion)
+   
+		THEN
+			UPDATE amonestaciones SET amonestaciones.tipo = nuevotipo, amonestaciones.diasSuspendido = nuevodiasSuspendido
+            WHERE amonestaciones.idAmonestacion = idAmonestacion;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La Amonestacion no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarAmonestaciones
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarAmonestaciones`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarAmonestaciones`(
+	idAmonestacion INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(SELECT amonestaciones.tipo FROM amonestaciones 
+			  WHERE amonestaciones.idAmonestacion = idAmonestacion)
+   
+		THEN
+			DELETE FROM amonestaciones WHERE amonestaciones.idAmonestacion = idAmonestacion;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La Amonestacion no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_AmonestarEmpleado
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_AmonestarEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_AmonestarEmpleado`(
+	cedEmpleado INT,
+	tipoAmonestacion VARCHAR(50),
+    fechaAmonestacion DATE
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idAmonestacion INT;
+    
+    SET idAmonestacion = (SELECT amonestaciones.idAmonestacion FROM amonestaciones WHERE amonestaciones.tipo = tipoAmonestacion);
+    
+	INSERT INTO amonestacionesxempleados(cedEmpleado,idAmonestacion,fechaAmonestacion)
+    VALUES(cedEmpleado,idAmonestacion,fechaAmonestacion);
+    
+    UPDATE planillas SET planillas.estado = 2 WHERE planillas.cedula = cedEmpleado;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_QuitarAmonestacionEmpleado
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_QuitarAmonestacionEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_QuitarAmonestacionEmpleado`(
+	cedEmpleado INT
+)
+BEGIN
+
+	UPDATE planillas SET planillas.estado = 1 WHERE planillas.cedula = cedEmpleado;
 
 END$$
 
@@ -788,21 +1042,16 @@ DROP procedure IF EXISTS `ferreteria`.`usp_InsertarBackorder`;
 DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarBackorder`(
-	nombreCliente VARCHAR(50),
-    correoCliente VARCHAR(100),
-    nombreEmpleado VARCHAR(50),
+	cedCliente INT,
+    cedEmpleado INT,
     nombreProducto VARCHAR(50),
     cantidad INT
 )
 BEGIN
 
 	DECLARE msgError VARCHAR(255);
-    DECLARE cedCliente INT;
-    DECLARE cedEmpleado INT;
     DECLARE idProducto INT;
     
-    SET cedCliente = (SELECT clientes.cedula FROM clientes WHERE clientes.nombre = nombreCliente AND clientes.correo = correo);
-    SET cedEmpleado = (SELECT planillas.cedula FROM planillas WHERE planillas.nombre = nombreEmpleado);
     SET idProducto = (SELECT productos.idProducto FROM productos WHERE productos.nombre = nombreProducto);
     
 	IF NOT EXISTS(
@@ -905,6 +1154,30 @@ END$$
 DELIMITER ;
 
 -- -----------------------------------------------------
+-- procedure usp_ObtenerBackorders
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerBackorders`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerBackorders`()
+BEGIN
+	
+    SELECT backorders.idBackorder AS 'idBackorder', clientes.cedula AS 'CedCliente', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', 
+    planillas.cedula AS 'CedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado', productos.idProducto AS 'IdProducto', productos.nombre AS 'NombreProducto', 
+    backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
+    FROM backorders
+    INNER JOIN clientes ON (clientes.cedula = backorders.cedCliente)
+    INNER JOIN planillas ON (planillas.cedula = backorders.cedEmpleado)
+    INNER JOIN productos ON (productos.idProducto = backorders.idProducto);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
 -- procedure usp_ObtenerBackorder
 -- -----------------------------------------------------
 
@@ -913,15 +1186,19 @@ DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerBackorder`;
 
 DELIMITER $$
 USE `ferreteria`$$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerBackorder`()
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerBackorder`(
+	idBackorder INT
+)
 BEGIN
 	
-    SELECT backorders.idBackorder AS 'idBackorder', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado',
-    productos.nombre AS 'NombreProducto', backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
+    SELECT backorders.idBackorder AS 'idBackorder', clientes.cedula AS 'CedCliente', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', 
+    planillas.cedula AS 'CedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado', productos.idProducto AS 'IdProducto', productos.nombre AS 'NombreProducto', 
+    backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
     FROM backorders
     INNER JOIN clientes ON (clientes.cedula = backorders.cedCliente)
     INNER JOIN planillas ON (planillas.cedula = backorders.cedEmpleado)
-    INNER JOIN productos ON (productos.idProducto = backorders.idProducto);
+    INNER JOIN productos ON (productos.idProducto = backorders.idProducto)
+    WHERE backorders.idBackorder = idBackorder;
 
 END$$
 
@@ -941,8 +1218,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerBackorderXCliente`(
 )
 BEGIN
 	
-    SELECT backorders.idBackorder AS 'idBackorder', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado',
-    productos.nombre AS 'NombreProducto', backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
+	SELECT backorders.idBackorder AS 'idBackorder', clientes.cedula AS 'CedCliente', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', 
+    planillas.cedula AS 'CedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado', productos.idProducto AS 'IdProducto', productos.nombre AS 'NombreProducto', 
+    backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
     FROM backorders
     INNER JOIN clientes ON (clientes.cedula = backorders.cedCliente)
     INNER JOIN planillas ON (planillas.cedula = backorders.cedEmpleado)
@@ -967,8 +1245,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerBackorderXEmpleado`(
 )
 BEGIN
 	
-    SELECT backorders.idBackorder AS 'idBackorder', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado',
-    productos.nombre AS 'NombreProducto', backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
+    SELECT backorders.idBackorder AS 'idBackorder', clientes.cedula AS 'CedCliente', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', 
+    planillas.cedula AS 'CedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado', productos.idProducto AS 'IdProducto', productos.nombre AS 'NombreProducto', 
+    backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
     FROM backorders
     INNER JOIN clientes ON (clientes.cedula = backorders.cedCliente)
     INNER JOIN planillas ON (planillas.cedula = backorders.cedEmpleado)
@@ -993,8 +1272,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerBackorderXProducto`(
 )
 BEGIN
 	
-    SELECT backorders.idBackorder AS 'idBackorder', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado',
-    productos.nombre AS 'NombreProducto', backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
+    SELECT backorders.idBackorder AS 'idBackorder', clientes.cedula AS 'CedCliente', CONCAT(clientes.nombre, ' ', clientes.apellidoP, ' ' , clientes.apellidoM) AS 'NombreCliente', 
+    planillas.cedula AS 'CedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado', productos.idProducto AS 'IdProducto', productos.nombre AS 'NombreProducto', 
+    backorders.cantidad AS 'Cantidad', backorders.pendiente AS 'Pendiente'
     FROM backorders
     INNER JOIN clientes ON (clientes.cedula = backorders.cedCliente)
     INNER JOIN planillas ON (planillas.cedula = backorders.cedEmpleado)
@@ -1020,7 +1300,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarClientes`(
 	apellidoP VARCHAR(50),
 	apellidoM VARCHAR(50),
 	correo VARCHAR(100),
-	numero VARCHAR(9)
+	numero VARCHAR(9),
+    ubicacion POINT
 )
 BEGIN
 
@@ -1036,8 +1317,8 @@ BEGIN
                   clientes.correo = correo
 				 )
 		THEN
-			INSERT INTO clientes(cedula,nombre,apellidoP,apellidoM,correo,numero) 
-            VALUES (cedula,nombre,apellidoP,apellidoM,correo,numero);
+			INSERT INTO clientes(cedula,nombre,apellidoP,apellidoM,correo,numero,ubicacion) 
+            VALUES (cedula,nombre,apellidoP,apellidoM,correo,numero,ubicacion);
 	ELSE
         SIGNAL SQLSTATE '45000';
 		SET msgError = 'El cliente que desea ingresar ya se encuentra en el sistema.';
@@ -1195,32 +1476,16 @@ BEGIN
     DECLARE idSede INT;
     DECLARE idDepartamento INT;
     
-    SET IdSede = (SELECT sedes.idSede FROM sedes WHERE sedes.nombre = nombreSede);
+    SET idSede = (SELECT sedes.idSede FROM sedes WHERE sedes.nombre = nombreSede);
     
 	IF NOT EXISTS(
 				  SELECT departamentos.idDepartamento
 				  FROM departamentos
-				  WHERE LOWER(departamentos.nombre)=LOWER(nombre)
+				  WHERE LOWER(departamentos.nombre)=LOWER(nombre) AND
+                  departamentos.idSede = idSede
 				 )
 		THEN
-			INSERT INTO departamentos(nombre) VALUES (nombre);
-            
-            SET idDepartamento = (SELECT departamentos.idDepartamento FROM departamentos WHERE departamentos.nombre = nombre);
-            
-            IF NOT EXISTS(
-				  SELECT departamentosXsedes.idDxS
-				  FROM departamentosXsedes
-				  WHERE departamentosXsedes.idSede = idSede AND
-                  departamentosXsedes.idDepartamento = idDepartamento
-				 )
-			THEN
-				INSERT INTO departamentosXsedes(idSede,idDepartamento,cedula) VALUES (idSede,idDepartamento,0);
-			
-            ELSE
-				SIGNAL SQLSTATE '45000';
-				SET msgError = 'El departamento que desea ingresar en la sede ya se encuentra en el sistema.';
-			END IF;
-            
+			INSERT INTO departamentos(idSede, nombre, cedEmpleado) VALUES (idSede, nombre , null);
 	ELSE
         SIGNAL SQLSTATE '45000';
 		SET msgError = 'El departamento que desea ingresar ya se encuentra en el sistema.';
@@ -1241,16 +1506,24 @@ DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarDepartamento`(
 	idDepartamento INT,
-	nuevonombre VARCHAR(50)
+    nuevoidSede INT,
+	nuevonombre VARCHAR(50),
+    nuevocedEmpleado INT
 )
 BEGIN
 
 	DECLARE msgError VARCHAR(255);
+    DECLARE idSede INT;
     DECLARE nombre VARCHAR(50);
+    DECLARE cedEmpleado INT;
     
+    SET idSede = (SELECT departamentos.idSede FROM departamentos WHERE departamentos.idDepartamento = idDepartamento);
     SET nombre = (SELECT departamentos.nombre FROM departamentos WHERE departamentos.idDepartamento = idDepartamento);
+    SET cedEmpleado = (SELECT departamentos.cedEmpleado FROM departamentos WHERE departamentos.idDepartamento = idDepartamento);
     
+    SET nuevoidSede = IFNULL(nuevoidSede,idSede);
     SET nuevonombre = IFNULL(nuevonombre,nombre);
+    SET nuevocedEmpleado = IFNULL(nuevocedEmpleado,cedEmpleado);
     
 	IF EXISTS(SELECT departamentos.nombre
 			  FROM departamentos
@@ -1258,7 +1531,7 @@ BEGIN
 			  )
 		THEN
 			
-            UPDATE departamentos SET departamentos.nombre = nuevonombre
+            UPDATE departamentos SET departamentos.idSede = nuevoidSede, departamentos.nombre = nuevonombre, departamentos.cedEmpleado = nuevocedEmpleado
             WHERE departamentos.idDepartamento = idDepartamento;
             
 	ELSE
@@ -1315,10 +1588,11 @@ USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerDepartamentos`()
 BEGIN
 
-	SELECT departamentos.idDepartamento, departamentos.nombre AS 'NombreDepartamento', sedes.nombre AS 'NombreSede'
+	SELECT departamentos.idDepartamento, departamentos.nombre AS 'Departamento', departamentos.idSede, sedes.nombre AS 'Sede', 
+    planillas.cedula AS 'cedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'EmpleadoExperto'
     FROM departamentos
-    INNER JOIN departamentosxsedes ON (departamentosxsedes.idDepartamento = departamentos.idDepartamento)
-    INNER JOIN sedes ON (sedes.idSede = departamentosxsedes.idSede);
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    LEFT JOIN planillas ON (planillas.cedula = departamentos.cedEmpleado);
 
 END$$
 
@@ -1338,10 +1612,61 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerDepartamento`(
 )
 BEGIN
 
-	SELECT departamentos.idDepartamento, departamentos.nombre AS 'NombreDepartamento', sedes.nombre AS 'NombreSede'
+	SELECT departamentos.idDepartamento, departamentos.nombre AS 'Departamento', departamentos.idSede, sedes.nombre AS 'Sede', 
+    planillas.cedula AS 'cedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'EmpleadoExperto'
     FROM departamentos
-    INNER JOIN departamentosxsedes ON (departamentosxsedes.idDepartamento = departamentos.idDepartamento)
-    INNER JOIN sedes ON (sedes.idSede = departamentosxsedes.idSede)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    LEFT JOIN planillas ON (planillas.cedula = departamentos.cedEmpleado)
+    WHERE departamentos.idDepartamento = idDepartamento;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerDepartamentoXSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerDepartamentoXSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerDepartamentoXSede`(
+	idSede INT
+)
+BEGIN
+
+	SELECT departamentos.idDepartamento, departamentos.nombre AS 'Departamento', departamentos.idSede, sedes.nombre AS 'Sede', 
+    planillas.cedula AS 'cedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'EmpleadoExperto'
+    FROM departamentos
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    LEFT JOIN planillas ON (planillas.cedula = departamentos.cedEmpleado)
+    WHERE departamentos.idSede = idSede;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerSedesXDepartamento
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerSedesXDepartamento`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerSedesXDepartamento`(
+	idDepartamento INT
+)
+BEGIN
+
+	SELECT departamentos.idDepartamento, departamentos.nombre AS 'Departamento', departamentos.idSede, sedes.nombre AS 'Sede', 
+    CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'EmpleadoExperto'
+    FROM sedes
+    INNER JOIN departamentos ON (departamentos.idSede = sedes.idSede)
+    INNER JOIN planillas ON (planillas.cedula = departamentos.cedEmpleado)
     WHERE departamentos.idDepartamento = idDepartamento;
 
 END$$
@@ -1368,7 +1693,7 @@ BEGIN
     
 	IF EXISTS(SELECT departamentos.nombre
 			  FROM departamentos
-			  WHERE departamentos.idDepartamento = idDepartamento
+			  WHERE departamentos.idDepartamento = idDepartamento AND departamentos.idSede = idSede
 			  )
 		THEN
 			
@@ -1378,8 +1703,8 @@ BEGIN
                       planillas.idSede = idSede)
 			THEN
             
-            UPDATE departamentosxsedes SET departamentosxsedes.cedula = cedEmpleado
-            WHERE departamentosxsedes.idSede = idSede AND departamentosxsedes.idDepartamento = idDepartamento;
+            UPDATE departamentos SET departamentos.cedEmpleado = cedEmpleado
+            WHERE departamentos.idSede = idSede AND departamentos.idDepartamento = idDepartamento;
             
             ELSE
             
@@ -1411,14 +1736,17 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarEnPlantilla`(
 	nombre VARCHAR(50),
     apellidoP VARCHAR(50),
     apellidoM VARCHAR(50),
-    nombreSede VARCHAR(50)
+    nombreSede VARCHAR(50),
+    nombreTipoE VARCHAR(50)
 )
 BEGIN
 
 	DECLARE msgError VARCHAR(255);
     DECLARE idSede INT;
+    DECLARE idTipoEmpleado INT;
     
     SET idSede = (SELECT sedes.idSede FROM sedes WHERE sedes.nombre = nombreSede);
+    SET idTipoEmpleado = (SELECT tipoempleado.idTipoEmpleado FROM tipoempleado WHERE tipoempleado.nombre = nombreTipoE);
     
 	IF NOT EXISTS(
 				  SELECT planillas.nombre
@@ -1429,8 +1757,8 @@ BEGIN
                   planillas.apellidoM = apellidoM
 				 )
 		THEN
-			INSERT INTO planillas(cedula,nombre,apellidoP,apellidoM,idSede,fechaContratado,estado) 
-            VALUES (cedula,nombre,apellidoP,apellidoM,idSede,CURDATE(),1);
+			INSERT INTO planillas(cedula,nombre,apellidoP,apellidoM,idSede,idTipoEmpleado,fechaContratado,estado) 
+            VALUES (cedula,nombre,apellidoP,apellidoM,idSede,idTipoEmpleado,CURDATE(),1);
 	ELSE
         SIGNAL SQLSTATE '45000';
 		SET msgError = 'El empleado que desea ingresar ya se encuentra en el sistema.';
@@ -1456,7 +1784,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarEnPlantilla`(
     nuevoapellidoM VARCHAR(50),
     nuevafechaContratado DATE,
     nuevoestado INT,
-    nuevoidSede INT
+    nuevoidSede INT,
+    nuevoidTipoEmpleado INT
 )
 BEGIN
 
@@ -1467,6 +1796,7 @@ BEGIN
     DECLARE fechaContratado DATE;
     DECLARE estado INT;
     DECLARE idSede INT;
+    DECLARE idTipoEmpleado INT;
     
     SET nombre = (SELECT planillas.nombre FROM planillas WHERE planillas.cedula = cedula);
     SET apellidoP = (SELECT planillas.apellidoP FROM planillas WHERE planillas.cedula = cedula);
@@ -1474,6 +1804,7 @@ BEGIN
     SET fechaContratado = (SELECT planillas.fechaContratado FROM planillas WHERE planillas.cedula = cedula);
     SET estado = (SELECT planillas.estado FROM planillas WHERE planillas.cedula = cedula);
     SET idSede = (SELECT planillas.idSede FROM planillas WHERE planillas.cedula = cedula);
+    SET idTipoEmpleado = (SELECT planillas.idTipoEmpleado FROM planillas WHERE planillas.cedula = cedula);
     
     SET nuevonombre = IFNULL(nuevonombre, nombre);
     SET nuevoapellidoP = IFNULL(nuevoapellidoP, apellidoP);
@@ -1481,6 +1812,7 @@ BEGIN
     SET nuevafechaContratado = IFNULL(nuevafechaContratado, fechaContratado);
     SET nuevoestado = IFNULL(nuevoestado, estado);
     SET nuevoidSede = IFNULL(nuevoidSede, idSede);
+    SET nuevoidTipoEmpleado = IFNULL(nuevoidTipoEmpleado, idTipoEmpleado);
     
 	IF EXISTS(
 				  SELECT planillas.nombre
@@ -1490,7 +1822,7 @@ BEGIN
 		THEN
 			
             UPDATE planillas SET planillas.nombre = nuevonombre, planillas.apellidoP = nuevoapellidoP, planillas.apellidoM = nuevoapellidoM, planillas.fechaContratado = nuevafechaContratado,
-            planillas.estado = nuevoestado, planillas.idSede = nuevoidSede
+            planillas.estado = nuevoestado, planillas.idSede = nuevoidSede, planillas.idTipoEmpleado = nuevoidTipoEmpleado
             WHERE planillas.cedula = cedula;
             
 	ELSE
@@ -1549,9 +1881,10 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerPlantilla`()
 BEGIN
     
 	SELECT planillas.cedula, planillas.nombre, planillas.apellidoP, planillas.apellidoM, planillas.fechaContratado, planillas.estado,
-    sedes.nombre AS 'NombreSede'
+    sedes.nombre AS 'NombreSede', tipoempleado.nombre AS 'TipoEmpleado'
     FROM planillas
-    INNER JOIN sedes ON (sedes.idSede = planillas.idSede);
+    INNER JOIN sedes ON (sedes.idSede = planillas.idSede)
+    INNER JOIN tipoempleado ON (tipoempleado.idTipoEmpleado = planillas.idTipoEmpleado);
 
 END$$
 
@@ -1572,9 +1905,10 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerPlantillaXSede`(
 BEGIN
     
 	SELECT planillas.cedula, planillas.nombre, planillas.apellidoP, planillas.apellidoM, planillas.fechaContratado, planillas.estado,
-    sedes.nombre AS 'NombreSede'
+    sedes.nombre AS 'NombreSede', tipoempleado.nombre AS 'TipoEmpleado'
     FROM planillas
     INNER JOIN sedes ON (sedes.idSede = planillas.idSede)
+    INNER JOIN tipoempleado ON (tipoempleado.idTipoEmpleado = planillas.idTipoEmpleado)
     WHERE planillas.idSede = idSede;
 
 END$$
@@ -1595,10 +1929,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEmpleado`(
 )
 BEGIN
     
-	SELECT planillas.cedula, planillas.nombre, planillas.apellidoP, planillas.apellidoM, planillas.fechaContratado, planillas.estado,
-    sedes.nombre AS 'NombreSede'
+	SELECT planillas.cedula, planillas.nombre, planillas.apellidoP, planillas.apellidoM, planillas.fechaContratado, planillas.estado, sedes.idSede AS 'idSede',
+    sedes.nombre AS 'NombreSede', tipoempleado.nombre AS 'TipoEmpleado'
     FROM planillas
     INNER JOIN sedes ON (sedes.idSede = planillas.idSede)
+    INNER JOIN tipoempleado ON (tipoempleado.idTipoEmpleado = planillas.idTipoEmpleado)
     WHERE planillas.cedula = cedula;
 
 END$$
@@ -1753,51 +2088,29 @@ DROP procedure IF EXISTS `ferreteria`.`usp_InsertarInventarioXSedes`;
 DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarInventarioXSedes`(
-	nombreSede VARCHAR(100),
-    nombreDepartamento VARCHAR(50),
-    nombreProducto VARCHAR(50),
-    cantidad INT,
-    pasillo INT,
-    estante INT
+	nombreProducto VARCHAR(50),
+    idPasillo INT,
+    cantidad INT
 )
 BEGIN
 
 	DECLARE msgError VARCHAR(255);
-    DECLARE idSede INT;
     DECLARE idProducto INT;
-    DECLARE idDepartamento INT;
     
     SET idProducto = (SELECT productos.idProducto FROM productos WHERE productos.nombre = nombreProducto);
-    SET idSede = (SELECT sedes.idSede FROM sedes WHERE sedes.nombre = nombreSede);
-    SET idDepartamento = (SELECT departamentos.idDepartamento FROM departamentos WHERE departamentos.nombre = nombreDepartamento);
-    
-    IF EXISTS(SELECT  departamentosXsedes.idDxS
-			  FROM departamentosXsedes 
-              WHERE departamentosXsedes.idSede = idSede
-              AND departamentosXsedes.idDepartamento = idDepartamento)
-    THEN
-		IF NOT EXISTS(
-					  SELECT inventariosXsedes.idIxS
-					  FROM inventariosXsedes
-					  WHERE inventariosXsedes.idSede = idSede AND
-					  inventariosXsedes.idProducto = idProducto
-					 )
-			THEN
-				IF(pasillo <= 4)
-                THEN
-					INSERT INTO inventariosXsedes(idProducto,idSede,idDepartamento,cantidad,pasillo,estante) 
-					VALUES (idProducto,idSede,idDepartamento,cantidad,pasillo,estante);
-				ELSE
-					SIGNAL SQLSTATE '45000';
-					SET msgError = 'Solamente existen 4 pasillos.';
-                END IF;
-		ELSE
-			SIGNAL SQLSTATE '45000';
-			SET msgError = 'El producto de la sede que desea ingresar ya se encuentra en el sistema.';
-		END IF;
+   
+    IF NOT EXISTS(
+					SELECT inventariosXsedes.idIxS
+					FROM inventariosXsedes
+					WHERE inventariosXsedes.idPasillo = idPasillo AND
+					inventariosXsedes.idProducto = idProducto
+					)
+		THEN
+			INSERT INTO inventariosXsedes(idProducto,idPasillo,cantidad) 
+			VALUES (idProducto,idPasillo,cantidad);
 	ELSE
 		SIGNAL SQLSTATE '45000';
-		SET msgError = 'El departamento no existe en esa sede.';
+		SET msgError = 'El producto de la sede que desea ingresar ya se encuentra en el sistema.';
 	END IF;
 
 END$$
@@ -1809,50 +2122,38 @@ DELIMITER ;
 -- -----------------------------------------------------
 
 USE `ferreteria`;
-DROP procedure IF EXISTS `ferreteria`.`usp_InsertarInventarioXSedes`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarInventarioXSedes`;
 
 DELIMITER $$
 USE `ferreteria`$$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarInventarioXSedes`(
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarInventarioXSedes`(
 	idIxS INT,
-	nuevoidSede INT,
-    nuevoidDepartamento INT,
     nuevoidProducto INT,
-    nuevacantidad INT,
-    nuevopasillo INT,
-    nuevoestante INT
+	nuevoidPasillo INT,
+    nuevacantidad INT
 )
 BEGIN
 
 	DECLARE msgError VARCHAR(255);
-    DECLARE idSede INT;
-    DECLARE idDepartamento INT;
     DECLARE idProducto INT;
+    DECLARE idPasillo INT;
     DECLARE cantidad INT;
-    DECLARE pasillo INT;
-    DECLARE estante INT;
     
     SET idProducto = (SELECT inventariosxsedes.idProducto FROM inventariosxsedes WHERE inventariosxsedes.idIxS = idIxS);
-    SET idSede = (SELECT inventariosxsedes.idSede FROM inventariosxsedes WHERE inventariosxsedes.idIxS = idIxS);
-    SET idDepartamento = (SELECT inventariosxsedes.idDepartamento FROM inventariosxsedes WHERE inventariosxsedes.idIxS = idIxS);
+    SET idPasillo = (SELECT inventariosxsedes.idPasillo FROM inventariosxsedes WHERE inventariosxsedes.idIxS = idIxS);
     SET cantidad = (SELECT inventariosxsedes.cantidad FROM inventariosxsedes WHERE inventariosxsedes.idIxS = idIxS);
-    SET pasillo = (SELECT inventariosxsedes.pasillo FROM inventariosxsedes WHERE inventariosxsedes.idIxS = idIxS);
-    SET estante = (SELECT inventariosxsedes.estante FROM inventariosxsedes WHERE inventariosxsedes.idIxS = idIxS);
     
-    SET nuevoidSede = IFNULL(nuevoidSede, idSede);
-    SET nuevoidDepartamento = IFNULL(nuevoidDepartamento, idDepartamento);
     SET nuevoidProducto = IFNULL(nuevoidProducto, idProducto);
-    SET nuevacantidad = IFNULL(nuevacantidad, cantidad);
-    SET nuevopasillo = IFNULL(nuevopasillo, pasillo);
-    SET nuevoestante = IFNULL(nuevoestante, estante);    
+    SET nuevoidPasillo = IFNULL(nuevoidPasillo, idPasillo);
+    SET nuevacantidad = IFNULL(nuevacantidad, cantidad);   
     
     IF EXISTS(SELECT  inventariosxsedes.idProducto
 			  FROM inventariosxsedes 
               WHERE inventariosxsedes.idIxS = idIxS)
     THEN
 		
-        UPDATE inventariosxsedes SET inventariosxsedes.idSede = nuevoidSede, inventariosxsedes.idDepartamento = nuevoidDepartamento, inventariosxsedes.idProducto = nuevoidProducto,
-        inventariosxsedes.cantidad = nuevacantidad, inventariosxsedes.pasillo = nuevopasillo, inventariosxsedes.estante = nuevoestante
+        UPDATE inventariosxsedes SET inventariosxsedes.idProducto = nuevoidProducto, inventariosxsedes.idPasillo = nuevoidPasillo,
+        inventariosxsedes.cantidad = nuevacantidad
         WHERE inventariosxsedes.idIxS = idIxS;
         
 	ELSE
@@ -1908,12 +2209,14 @@ USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerInventario`()
 BEGIN
 
-	SELECT productos.nombre AS 'NombreProducto', sedes.nombre AS 'NombreSede', departamentos.nombre AS 'NombreDepartamento',
-    inventariosxsedes.cantidad AS 'Cantidad', inventariosxsedes.pasillo AS 'Pasillo', inventariosxsedes.estante AS 'Estante'
+	SELECT inventariosxsedes.idIxS, productos.idProducto, productos.nombre AS 'Producto', sedes.idSede, sedes.nombre AS 'Sede', 
+    departamentos.idDepartamento, departamentos.nombre AS 'Departamento', inventariosxsedes.cantidad AS 'Cantidad', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'Pasillo'
     FROM inventariosxsedes
     INNER JOIN productos ON (productos.idProducto = inventariosxsedes.idProducto)
-    INNER JOIN sedes ON (sedes.idSede = inventariosxsedes.idSede)
-    INNER JOIN departamentos ON (departamentos.idDepartamento = inventariosxsedes.idDepartamento);
+    INNER JOIN pasillos ON (pasillos.idPasillo = inventariosxsedes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede);
 
 END$$
 
@@ -1933,13 +2236,131 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerInventarioXSede`(
 )
 BEGIN
 
-	SELECT productos.nombre AS 'NombreProducto', sedes.nombre AS 'NombreSede', departamentos.nombre AS 'NombreDepartamento',
-    inventariosxsedes.cantidad AS 'Cantidad', inventariosxsedes.pasillo AS 'Pasillo', inventariosxsedes.estante AS 'Estante'
+	SELECT inventariosxsedes.idIxS, productos.idProducto, productos.nombre AS 'Producto', sedes.idSede, sedes.nombre AS 'Sede', 
+    departamentos.idDepartamento, departamentos.nombre AS 'Departamento', inventariosxsedes.cantidad AS 'Cantidad', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'Pasillo'
     FROM inventariosxsedes
     INNER JOIN productos ON (productos.idProducto = inventariosxsedes.idProducto)
-    INNER JOIN sedes ON (sedes.idSede = inventariosxsedes.idSede)
-    INNER JOIN departamentos ON (departamentos.idDepartamento = inventariosxsedes.idDepartamento)
-    WHERE inventariosxsedes.idSede = idSede;
+    INNER JOIN pasillos ON (pasillos.idPasillo = inventariosxsedes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE sedes.idSede = idSede;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerInventarioXDepartamento
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerInventarioXDepartamento`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerInventarioXDepartamento`(
+	idDepartamento INT
+)
+BEGIN
+
+	SELECT inventariosxsedes.idIxS, productos.idProducto, productos.nombre AS 'Producto', sedes.idSede, sedes.nombre AS 'Sede', 
+    departamentos.idDepartamento, departamentos.nombre AS 'Departamento', inventariosxsedes.cantidad AS 'Cantidad', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'Pasillo'
+    FROM inventariosxsedes
+    INNER JOIN productos ON (productos.idProducto = inventariosxsedes.idProducto)
+    INNER JOIN pasillos ON (pasillos.idPasillo = inventariosxsedes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE departamentos.idDepartamento = idDepartamento AND pasillos.idDepartamento = idDepartamento;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerInventarioXProducto
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerInventarioXProducto`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerInventarioXProducto`(
+	idProducto INT
+)
+BEGIN
+
+	SELECT inventariosxsedes.idIxS, productos.idProducto, productos.nombre AS 'Producto', sedes.idSede, sedes.nombre AS 'Sede', 
+    departamentos.idDepartamento, departamentos.nombre AS 'Departamento', inventariosxsedes.cantidad AS 'Cantidad', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'Pasillo'
+    FROM inventariosxsedes
+    INNER JOIN productos ON (productos.idProducto = inventariosxsedes.idProducto)
+    INNER JOIN pasillos ON (pasillos.idPasillo = inventariosxsedes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE inventariosxsedes.idProducto = idProducto;
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerInventarioXDepartamentoXSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerInventarioXDepartamentoXSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerInventarioXDepartamentoXSede`(
+	idSede INT,
+    idDepartamento INT
+)
+BEGIN
+
+	SELECT inventariosxsedes.idIxS, productos.idProducto, productos.nombre AS 'Producto', sedes.idSede, sedes.nombre AS 'Sede', 
+    departamentos.idDepartamento, departamentos.nombre AS 'Departamento', inventariosxsedes.cantidad AS 'Cantidad', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'Pasillo'
+    FROM inventariosxsedes
+    INNER JOIN productos ON (productos.idProducto = inventariosxsedes.idProducto)
+    INNER JOIN pasillos ON (pasillos.idPasillo = inventariosxsedes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE sedes.idSede = idSede AND departamentos.idDepartamento = idDepartamento AND pasillos.idDepartamento = idDepartamento;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerInventarioXDepartamentoXSedeXProducto
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerInventarioXDepartamentoXSedeXProducto`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerInventarioXDepartamentoXSedeXProducto`(
+	idSede INT,
+    idDepartamento INT,
+    idProducto INT
+)
+BEGIN
+
+	SELECT inventariosxsedes.idIxS, productos.idProducto, productos.nombre AS 'Producto', sedes.idSede, sedes.nombre AS 'Sede', 
+    departamentos.idDepartamento, departamentos.nombre AS 'Departamento', inventariosxsedes.cantidad AS 'Cantidad', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'Pasillo'
+    FROM inventariosxsedes
+    INNER JOIN productos ON (productos.idProducto = inventariosxsedes.idProducto)
+    INNER JOIN pasillos ON (pasillos.idPasillo = inventariosxsedes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE sedes.idSede = idSede AND departamentos.idDepartamento = idDepartamento AND pasillos.idDepartamento = idDepartamento
+    AND inventariosxsedes.idProducto = idProducto;
 
 END$$
 
@@ -2049,6 +2470,70 @@ END$$
 DELIMITER ;
 
 -- -----------------------------------------------------
+-- procedure usp_ObtenerMarcas
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerMarcas`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerMarcas`()
+BEGIN
+
+	SELECT marcas.idMarca, marcas.nombre
+    FROM marcas;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerMarca
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerMarca`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerMarca`(
+	idMarca INT
+)
+BEGIN
+
+	SELECT marcas.idMarca, marcas.nombre
+    FROM marcas
+    WHERE marcas.idMarca = idMarca;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerMarcaXProdcuto
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerMarcaXProdcuto`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerMarcaXProdcuto`(
+	idProducto INT
+)
+BEGIN
+
+	SELECT marcas.idMarca, marcas.nombre
+    FROM productos
+    INNER JOIN marcas ON (marcas.idMarca = productos.idMarca)
+    WHERE productos.idProducto = idProducto;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
 -- procedure usp_InsertarMensaje
 -- -----------------------------------------------------
 
@@ -2058,22 +2543,16 @@ DROP procedure IF EXISTS `ferreteria`.`usp_InsertarMensaje`;
 DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarMensaje`(
-	nombreCliente VARCHAR(50),
-    correoCliente VARCHAR(100),
-    nombreEmpleado VARCHAR(50),
+	cedCliente INT,
+    cedEmpleado INT,
     remitente VARCHAR(50),
     mensaje VARCHAR(300)
 )
 BEGIN
 
 	DECLARE msgError VARCHAR(255);
-    DECLARE cedCliente INT;
-    DECLARE cedEmpleado INT;
-    DECLARE idProducto INT;
     DECLARE cedremitente iNT;
     
-    SET cedCliente = (SELECT clientes.cedula FROM clientes WHERE clientes.nombre = nombreCliente AND clientes.correo = correo);
-    SET cedEmpleado = (SELECT planillas.cedula FROM planillas WHERE planillas.nombre = nombreEmpleado);
     SET cedremitente = (SELECT planillas.cedula FROM planillas WHERE planillas.nombre = remitente);
     
 	IF NOT EXISTS(
@@ -2144,33 +2623,65 @@ DROP procedure IF EXISTS `ferreteria`.`usp_InsertarPedido`;
 DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarPedido`(
-	nombreCliente VARCHAR(50),
-    correoCliente VARCHAR(100),
-    nombreEmpleado VARCHAR(50),
+	cedCliente INT,
+    cedEmpleado INT,
     nombreProducto VARCHAR(50),
+    nombreSede VARCHAR(50),
     cantidadSolicitada INT
 )
 BEGIN
 
 	DECLARE msgError VARCHAR(255);
-    DECLARE cedCliente INT;
-    DECLARE cedEmpleado INT;
     DECLARE idProducto INT;
     DECLARE idPedido INT;
+    DECLARE idSede INT;
     
-    SET cedCliente = (SELECT clientes.cedula FROM clientes WHERE clientes.nombre = nombreCliente AND clientes.correo = correo);
-    SET cedEmpleado = (SELECT planillas.cedula FROM planillas WHERE planillas.nombre = nombreEmpleado);
+    SET idSede = (SELECT sedes.idSede FROM sedes WHERE sedes.nombre = nombreSede);
     SET idProducto = (SELECT productos.idProducto FROM productos WHERE productos.nombre = nombreProducto);
     
-    INSERT INTO pedidos(fechaPedido,cedCliente,cedEmpleado,aprobado) VALUES(CURDATE(),cedCliente,cedEmpleado,0);
-    
-    SET idPedido = (SELECT pedidos.idPedido FROM pedidos WHERE pedidos.cedCliente = cedCliente AND pedidos.cedEmpleado = cedEmpleado);
-    
-	INSERT INTO productosXpedidos(idPedido,idProducto,cantidadSolicitada,cantidadRecibida) 
-    VALUES (idPedido,idProducto,cantidadSolicitada,0);
+    IF EXISTS (SELECT planillas.nombre FROM planillas WHERE planillas.cedula = cedEmpleado AND planillas.idSede = idSede)
+    THEN
+		
+        IF NOT EXISTS(SELECT pedidos.idPedido FROM pedidos WHERE pedidos.cedCliente = cedCliente AND 
+					  pedidos.cedEmpleado = cedEmpleado AND pedidos.idSede = idSede AND pedidos.fechaPedido = CURDATE())
+		THEN
+			INSERT INTO pedidos(fechaPedido,cedCliente,cedEmpleado,idSede,aprobado) VALUES(CURDATE(),cedCliente,cedEmpleado,idSede,0);
+			
+			SET idPedido = (SELECT LAST_INSERT_ID() FROM pedidos LIMIT 1);
             
-    UPDATE inventariosxsedes SET inventariosxsedes.cantidad = (inventariosxsedes.cantidad - cantidadSolicitada)
-	WHERE inventariosxsedes.idProducto = idProducto;
+            IF NOT EXISTS(SELECT productosxpedidos.idPxP FROM productosxpedidos 
+						   WHERE productosxpedidos.idPedido AND productosxpedidos.idProducto)
+            THEN
+			
+				INSERT INTO productosXpedidos(idPedido,idProducto,cantidadSolicitada,cantidadRecibida) 
+				VALUES (idPedido,idProducto,cantidadSolicitada,0);
+						
+				UPDATE inventariosxsedes SET inventariosxsedes.cantidad = (inventariosxsedes.cantidad - cantidadSolicitada)
+				WHERE inventariosxsedes.idProducto = idProducto AND inventariosxsedes.idSede = idSede;
+                
+            ELSE
+            
+				UPDATE productosxpedidos SET productosxpedidos.cantidadSolicitada = (productosxpedidos.cantidadSolicitada + cantidadSolicitada)
+                WHERE productosxpedidos.idPedido = idPedido AND productosxpedidos.idProducto = idProducto;
+						
+				UPDATE inventariosxsedes SET inventariosxsedes.cantidad = (inventariosxsedes.cantidad - cantidadSolicitada)
+				WHERE inventariosxsedes.idProducto = idProducto AND inventariosxsedes.idSede = idSede;
+            
+            END IF;
+		ELSE
+			SET idPedido = (SELECT pedidos.idPedido FROM pedidos WHERE pedidos.cedCliente = cedCliente AND 
+					  pedidos.cedEmpleado = cedEmpleado AND pedidos.idSede = idSede AND pedidos.fechaPedido = CURDATE());
+			
+			INSERT INTO productosXpedidos(idPedido,idProducto,cantidadSolicitada,cantidadRecibida) 
+			VALUES (idPedido,idProducto,cantidadSolicitada,0);
+					
+			UPDATE inventariosxsedes SET inventariosxsedes.cantidad = (inventariosxsedes.cantidad - cantidadSolicitada)
+			WHERE inventariosxsedes.idProducto = idProducto AND inventariosxsedes.idSede = idSede;
+        END IF;
+    ELSE
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'El empleado no pertenece a esa cedula.';
+    END IF;
 
 END$$
 
@@ -2186,9 +2697,11 @@ DROP procedure IF EXISTS `ferreteria`.`usp_InsertarProducto`;
 DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarProducto`(
+	codigo VARCHAR(50),
 	nombre VARCHAR(50),
 	descripcion VARCHAR(100),
 	utilidad VARCHAR(50),
+    aspectosTecnicos TEXT,
 	precio DOUBLE PRECISION,
 	precioVenta DOUBLE PRECISION,
 	nombreMarca VARCHAR(50)
@@ -2206,8 +2719,8 @@ BEGIN
 				  WHERE productos.nombre = nombre
 				 )
 		THEN
-			INSERT INTO productos(nombre,descripcion,utilidad,precio,precioVenta,idMarca) 
-            VALUES (nombre,descripcion,utilidad,precio,precioVenta,idMarca);
+			INSERT INTO productos(codigoProducto,nombre,descripcion,utilidad,aspectosTecnicos,precio,precioVenta,idMarca) 
+            VALUES (codigo,nombre,descripcion,utilidad,aspectosTecnicos,precio,precioVenta,idMarca);
 	ELSE
         SIGNAL SQLSTATE '45000';
 		SET msgError = 'El producto que desea ingresar ya se encuentra en el sistema.';
@@ -2228,8 +2741,10 @@ DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarProducto`(
 	idProducto INT,
+    nuevocodigo INT,
 	nuevadescripcion VARCHAR(100),
 	nuevautilidad VARCHAR(50),
+    nuevoaspectoTecnico TEXT,
 	nuevoprecio DOUBLE PRECISION,
 	nuevoprecioVenta DOUBLE PRECISION,
 	nuevoidMarca VARCHAR(50)
@@ -2238,21 +2753,27 @@ BEGIN
 
 	DECLARE msgError VARCHAR(255);
     DECLARE idMarca INT;
+    DECLARE codigo INT;
     DECLARE descripcion VARCHAR(100);
 	DECLARE utilidad VARCHAR(50);
+    DECLARE aspectoTecnico TEXT;
 	DECLARE precio DOUBLE PRECISION;
 	DECLARE precioV DOUBLE PRECISION;
     
+    SET codigo = (SELECT productos.codigoProducto FROM productos WHERE productos.idProducto = idProducto);
     SET descripcion=(SELECT productos.descripcion FROM productos WHERE productos.idProducto = idProducto);
 	SET utilidad=(SELECT productos.utilidad FROM productos WHERE productos.idProducto = idProducto);
+    SET aspectoTecnico = (SELECT productos.aspectosTecnicos FROM productos WHERE productos.idProducto = idProducto);
 	SET precio=(SELECT productos.precio FROM productos WHERE productos.idProducto = idProducto);
 	SET precioV=(SELECT productos.precioVenta FROM productos WHERE productos.idProducto = idProducto);
 	SET idMarca=(SELECT productos.idMarca FROM productos WHERE productos.idProducto = idProducto);
 	
+    SET nuevocodigo = IFNULL(nuevocodigo, codigo);
     /*Soluciona el caso en que no se desee modificar la descripcion*/
 	SET nuevadescripcion=IFNULL(nuevadescripcion,descripcion);
 	/*Soluciona el caso en que no se desee modificar la utilidad*/
 	SET nuevautilidad=IFNULL(nuevautilidad,utilidad);
+    SET nuevoaspectoTecnico = IFNULL(nuevoaspectoTecnico, aspectoTecnico);
 	/*Soluciona el caso en que no se desee modificar el precio*/
 	SET nuevoprecio=IFNULL(nuevoprecio,precio);
 	/*Soluciona el caso en que no se desee modificar el precio venta*/
@@ -2267,7 +2788,7 @@ BEGIN
 				 )
 		THEN
 			
-			UPDATE productos SET productos.descripcion = nuevadescripcion, productos.utilidad = nuevautilidad,
+			UPDATE productos SET productos.codigoProducto = nuevocodigo, productos.descripcion = nuevadescripcion, productos.utilidad = nuevautilidad, productos.aspectosTecnicos = nuevoaspectoTecnico,
             productos.precio = nuevoprecio, productos.precioVenta = nuevoprecioVenta, productos.idMarca = nuevoidMarca
             WHERE productos.idProducto = idProducto;
 	ELSE
@@ -2323,7 +2844,7 @@ USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerProductos`()
 BEGIN
 
-	SELECT productos.idProducto, productos.nombre, productos.descripcion, productos.utilidad, productos.precio, productos.precioVenta, marcas.nombre AS 'NombreMarca'
+	SELECT productos.idProducto, productos.codigoProducto, productos.nombre, productos.descripcion, productos.utilidad, productos.aspectosTecnicos, productos.precio, productos.precioVenta, marcas.nombre AS 'NombreMarca'
     FROM productos
     INNER JOIN marcas ON (marcas.idMarca = productos.idMarca);
 
@@ -2345,7 +2866,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerProductosXMarca`(
 )
 BEGIN
 
-	SELECT productos.idProducto, productos.nombre, productos.descripcion, productos.utilidad, productos.precio, productos.precioVenta, marcas.nombre AS 'NombreMarca'
+	SELECT productos.idProducto, productos.codigoProducto, productos.nombre, productos.descripcion, productos.utilidad, productos.aspectosTecnicos, productos.precio, productos.precioVenta, marcas.nombre AS 'NombreMarca'
     FROM productos
     INNER JOIN marcas ON (marcas.idMarca = productos.idMarca)
     WHERE productos.idMarca = idMarca;
@@ -2368,10 +2889,38 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerProducto`(
 )
 BEGIN
 
-	SELECT productos.idProducto, productos.nombre, productos.descripcion, productos.utilidad, productos.precio, productos.precioVenta, marcas.nombre AS 'NombreMarca'
+	SELECT productos.idProducto, productos.codigoProducto, productos.nombre, productos.descripcion, productos.utilidad, productos.aspectosTecnicos, productos.precio, productos.precioVenta, marcas.nombre AS 'NombreMarca'
     FROM productos
     INNER JOIN marcas ON (marcas.idMarca = productos.idMarca)
     WHERE productos.idProducto = idProducto;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerProductosxSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerProductosxSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerProductosxSede`(
+	nombreSede VARCHAR(50)
+)
+BEGIN
+
+	SELECT sedes.nombre AS 'Sede', departamentos.nombre AS 'Departamento', marcas.nombre AS 'Marca', 
+    productos.idProducto AS 'IdProducto', productos.codigoProducto, productos.nombre AS 'NombreProducto'
+    FROM productos 
+    INNER JOIN inventariosXsedes ON (inventariosXsedes.idProducto = productos.idProducto)
+    INNER JOIN sedes ON (sedes.idSede = inventariosxsedes.idSede)
+    INNER JOIN departamentosXsedes ON (departamentosXsedes.idSede = sedes.idSede) 
+    INNER JOIN departamentos ON (departamentos.idDepartamento = departamentosXsedes.idDepartamento)
+    INNER JOIN marcas ON (marcas.idMarca = productos.idMarca)
+    WHERE sedes.nombre = nombreSede;
 
 END$$
 
@@ -2388,7 +2937,7 @@ DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarSede`(
 	nombre VARCHAR(50),
-    ubicacion POLYGON
+    ubicacion POINT
 )
 BEGIN
 
@@ -2422,13 +2971,13 @@ USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarSede`(
 	idSede INT,
 	nuevonombre VARCHAR(50),
-    nuevaubicacion POLYGON
+    nuevaubicacion POINT
 )
 BEGIN
 
 	DECLARE msgError VARCHAR(255);
     DECLARE nombre VARCHAR(50);
-    DECLARE ubicacion POLYGON;
+    DECLARE ubicacion POINT;
     
     SET nombre = (SELECT sedes.nombre FROM sedes WHERE sedes.idSede = idSede);
     SET ubicacion = (SELECT sedes.ubicacion FROM sedes WHERE sedes.idSede = idSede);
@@ -2505,15 +3054,15 @@ END$$
 DELIMITER ;
 
 -- -----------------------------------------------------
--- procedure usp_ObtenerSedes
+-- procedure usp_ObtenerSede
 -- -----------------------------------------------------
 
 USE `ferreteria`;
-DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerSedes`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerSede`;
 
 DELIMITER $$
 USE `ferreteria`$$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerSedes`(
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerSede`(
 	idSede INT
 )
 BEGIN
@@ -2521,6 +3070,2642 @@ BEGIN
 	SELECT sedes.idSede, sedes.nombre, sedes.ubicacion
     FROM sedes
     WHERE sedes.idSede = idSede;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarMarcaCarro
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarMarcaCarro`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarMarcaCarro`(
+	nombre VARCHAR(50)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF NOT EXISTS(
+				  SELECT marcascarros.idMarcaCarro
+				  FROM marcascarros
+				  WHERE marcascarros.nombre = nombre
+				 )
+		THEN
+			INSERT INTO marcascarros(nombre) VALUES (nombre);
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarMarcaCarro
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarMarcaCarro`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarMarcaCarro`(
+	idMarcaCarro INT,
+	nuevonombre VARCHAR(50)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE nombre VARCHAR(50);
+    
+    SET nombre = (SELECT marcascarros.nombre FROM marcascarros WHERE marcascarros.idMarcaCarro = idMarcaCarro);
+    
+    SET nuevonombre = IFNULL(nuevonombre, nombre);
+    
+	IF EXISTS(  SELECT marcascarros.nombre
+				FROM marcascarros
+				WHERE marcascarros.idMarcaCarro = idMarcaCarro
+			 )
+		THEN
+			UPDATE marcascarros SET marcascarros.nombre = nuevonombre
+            WHERE marcascarros.idMarcaCarro = idMarcaCarro;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarMarcaCarro
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarMarcaCarro`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarMarcaCarro`(
+	idMarcaCarro INT
+)
+BEGIN
+	
+    DECLARE msgError VARCHAR(255);
+
+	IF EXISTS(  SELECT marcascarros.nombre
+				FROM marcascarros
+				WHERE marcascarros.idMarcaCarro = idMarcaCarro
+			 )
+		THEN
+			DELETE FROM marcascarros WHERE marcascarros.idMarcaCarro = idMarcaCarro;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerMarcasCarros
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerMarcasCarros`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerMarcasCarros`()
+BEGIN
+
+	SELECT marcascarros.idMarcaCarro, marcascarros.nombre
+    FROM marcascarros;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerMarcaCarro
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerMarcaCarro`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerMarcaCarro`(
+	idMarcaCarro INT
+)
+BEGIN
+
+	SELECT marcascarros.idMarcaCarro, marcascarros.nombre
+    FROM marcascarros
+    WHERE marcascarros.idMarcaCarro = idMarcaCarro;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarModeloCarro
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarModeloCarro`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarModeloCarro`(
+	nombre VARCHAR(50),
+    nombreMarca VARCHAR(50)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idMarcaCarro INT;
+    DECLARE idModelo INT;
+    
+    SET idMarcaCarro = (SELECT marcascarros.idMarcaCarro FROM marcascarros WHERE marcascarros.nombre = nombreMarca);
+    
+	IF NOT EXISTS(
+				  SELECT modelocarros.idModelo
+				  FROM modelocarros
+				  WHERE modelocarros.nombre = nombre
+				 )
+		THEN
+			INSERT INTO modelocarros(idMarcaCarro,nombre) VALUES (idMarcaCarro, nombre);
+            
+	ELSE
+		SIGNAL SQLSTATE '45000';
+        SET msgError = 'El modelo del carro que desea ingresar ya se encuentra en el sistema o el modelo por marca esta en el sistema';
+
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarModeloCarro
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarModeloCarro`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarModeloCarro`(
+	idModelo INT,
+    nuevoidMarcaCarro INT,
+	nuevonombre VARCHAR(50)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idMarcaCarro INT;
+    DECLARE nombre VARCHAR(50);
+    
+    SET idMarcaCarro = (SELECT modelocarros.idMarcaCarro FROM modelocarros WHERE modelocarros.idModelo = idModelo);
+    SET nombre = (SELECT modelocarros.nombre FROM modelocarros WHERE modelocarros.idModelo = idModelo);
+    
+    SET nuevoidMarcaCarro = IFNULL(nuevoidMarcaCarro, idMarcaCarro);
+    SET nuevonombre = IFNULL(nuevonombre, nombre);
+    
+	IF EXISTS(  SELECT modelocarros.nombre
+				FROM modelocarros
+				WHERE modelocarros.idModelo = idModelo
+			 )
+		THEN
+			UPDATE modelocarros SET modelocarros.idMarcaCarro = nuevoidMarcaCarro, modelocarros.nombre = nuevonombre
+            WHERE modelocarros.idModelo = idModelo;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El modelo del carro no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarModeloCarro
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarModeloCarro`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarModeloCarro`(
+	idModelo INT
+)
+BEGIN
+	
+    DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(  SELECT modelocarros.nombre
+				FROM modelocarros
+				WHERE modelocarros.idModelo = idModelo
+			 )
+		THEN
+			DELETE FROM modelocarros WHERE modelocarros.idModelo = idModelo;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerModelosCarros
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerModelosCarros`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerModelosCarros`()
+BEGIN
+
+	SELECT modelocarros.idModelo, modelocarros.nombre, modelocarros.idMarcaCarro, marcascarros.nombre AS 'MarcaCarro'
+    FROM modelocarros
+    INNER JOIN marcascarros ON (marcascarros.idMarcaCarro = modelocarros.idMarcaCarro);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerModeloCarro
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerModeloCarro`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerModeloCarro`(
+	idModelo INT
+)
+BEGIN
+
+	SELECT modelocarros.idModelo, modelocarros.nombre, modelocarros.idMarcaCarro, marcascarros.nombre AS 'MarcaCarro'
+    FROM modelocarros
+    INNER JOIN marcascarros ON (marcascarros.idMarcaCarro = modelocarros.idMarcaCarro)
+    WHERE modelocarros.idModelo = idModelo;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerModelosXMarca
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerModelosXMarca`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerModelosXMarca`(
+	idMarcaCarro INT
+)
+BEGIN
+
+	SELECT modelocarros.idModelo, modelocarros.nombre, modelocarros.idMarcaCarro, marcascarros.nombre AS 'MarcaCarro'
+    FROM modelocarros
+    INNER JOIN marcascarros ON (marcascarros.idMarcaCarro = modelocarros.idMarcaCarro)
+    WHERE modelocarros.idMarcaCarro = idMarcaCarro;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerMarcasXModelo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerMarcasXModelo`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerMarcasXModelo`(
+	idModelo INT
+)
+BEGIN
+
+	SELECT modelocarros.idModelo, modelocarros.nombre, modelocarros.idMarcaCarro, marcascarros.nombre AS 'MarcaCarro'
+    FROM marcascarros
+    INNER JOIN modelocarros ON (modelocarros.idMarcaCarro = marcascarros.idMarcaCarro)
+    WHERE modelocarros.idModelo = idModelo;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarFlotilla
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarFlotilla`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarFlotilla`(
+	placaV VARCHAR(6),
+    idModelo INT,
+    anno INT,
+	cedulaChofer INT,
+    consumoKM DOUBLE PRECISION
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF NOT EXISTS(
+				  SELECT flotilla.anno
+				  FROM flotilla
+				  WHERE flotilla.placa = placaV
+				 )
+		THEN
+			INSERT INTO flotilla(placa, idModelo, anno, cedula, consumoXkm) 
+            VALUES (placaV, idModelo, anno, cedulaChofer, consumoKM);
+	ELSE
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'El vehiculo de la flotilla que desea ingresar ya se encuentra en el sistema o el modelo por marca esta en el sistema';
+			
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarFlotilla
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarFlotilla`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarFlotilla`(
+	placaV VARCHAR(6),
+    nuevoidModelo INT,
+    nuevoanno INT,
+	nuevocedulaChofer INT,
+    nuevoconsumoKM DOUBLE PRECISION
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idModelo INT;
+    DECLARE anno INT;
+    DECLARE cedula INT;
+    DECLARE consumoXkm DOUBLE PRECISION;
+    
+    SET idModelo = (SELECT flotilla.idModelo FROM flotilla WHERE flotilla.placa = placaV);
+    SET anno = (SELECT flotilla.anno FROM flotilla WHERE flotilla.placa = placaV);
+    SET cedula = (SELECT flotilla.cedula FROM flotilla WHERE flotilla.placa = placaV);
+    SET consumoXkm = (SELECT flotilla.consumoXkm FROM flotilla WHERE flotilla.placa = placaV);
+                  
+	SET nuevoidModelo = IFNULL(nuevoidModelo, idModelo);
+    SET nuevoanno = IFNULL(nuevoanno, anno);
+	SET nuevocedulaChofer = IFNULL(nuevocedulaChofer, cedula);
+    SET nuevoconsumoKM = IFNULL(nuevoconsumoKM, consumoXkm);
+    
+	IF EXISTS(
+				  SELECT flotilla.anno
+				  FROM flotilla
+				  WHERE flotilla.placa = placaV
+				 )
+		THEN
+			UPDATE flotilla SET flotilla.idModelo = nuevoidModelo, flotilla.anno = nuevoanno, flotilla.cedula = nuevocedulaChofer, flotilla.consumoXkm = nuevoconsumoKM
+            WHERE flotilla.placa = placaV;
+	ELSE
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'El vehiculo de la flotilla no se encuentra en el sistema o el modelo por marca esta en el sistema';
+			
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarFlotilla
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarFlotilla`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarFlotilla`(
+	placaV VARCHAR(6)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(
+				  SELECT flotilla.anno
+				  FROM flotilla
+				  WHERE flotilla.placa = placaV
+				 )
+		THEN
+			DELETE FROM flotilla WHERE flotilla.placa = placaV;
+	ELSE
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'El vehiculo de la flotilla no se encuentra en el sistema o el modelo por marca esta en el sistema';
+			
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerFlotilla
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerFlotilla`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerFlotilla`()
+BEGIN
+
+	SELECT flotilla.placa AS 'Placa', marcascarros.idMarcaCarro AS 'IdMarca', marcascarros.nombre AS 'NombreMarca',  modelocarros.idModelo AS 'IdModelo', 
+    modelocarros.nombre AS 'NombreModelo', flotilla.anno AS 'Año', flotilla.cedula AS 'CedulaChofer', flotilla.consumoXkm AS 'ConsumoKM'
+    FROM flotilla
+    INNER JOIN modelocarros ON (modelocarros.idModelo = flotilla.idModelo)
+    INNER JOIN marcascarros ON (marcascarros.idMarcaCarro = modelocarros.idMarcaCarro);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerVehiculoFlotilla
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerVehiculoFlotilla`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerVehiculoFlotilla`(
+	placa INT
+)
+BEGIN
+
+	SELECT flotilla.placa AS 'Placa', marcascarros.idMarcaCarro AS 'IdMarca', marcascarros.nombre AS 'NombreMarca',  modelocarros.idModelo AS 'IdModelo', 
+    modelocarros.nombre AS 'NombreModelo', flotilla.anno AS 'Año', flotilla.cedula AS 'CedulaChofer', flotilla.consumoXkm AS 'ConsumoKM'
+    FROM flotilla
+    INNER JOIN modelocarros ON (modelocarros.idModelo = flotilla.idModelo)
+    INNER JOIN marcascarros ON (marcascarros.idMarcaCarro = modelocarros.idMarcaCarro)
+    WHERE flotilla.placa = placa;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerVehiculoXMarca
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerVehiculoXMarca`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerVehiculoXMarca`(
+	idMarcaCarro INT
+)
+BEGIN
+
+	SELECT flotilla.placa AS 'Placa', marcascarros.idMarcaCarro AS 'IdMarca', marcascarros.nombre AS 'NombreMarca',  modelocarros.idModelo AS 'IdModelo', 
+    modelocarros.nombre AS 'NombreModelo', flotilla.anno AS 'Año', flotilla.cedula AS 'CedulaChofer', flotilla.consumoXkm AS 'ConsumoKM'
+    FROM flotilla
+    INNER JOIN modelocarros ON (modelocarros.idModelo = flotilla.idModelo)
+    INNER JOIN marcascarros ON (marcascarros.idMarcaCarro = modelocarros.idMarcaCarro)
+    WHERE marcascarros.idMarcaCarro = idMarcaCarro;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerVehiculoXModelo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerVehiculoXModelo`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerVehiculoXModelo`(
+	idModelo INT
+)
+BEGIN
+
+	SELECT flotilla.placa AS 'Placa', marcascarros.idMarcaCarro AS 'IdMarca', marcascarros.nombre AS 'NombreMarca',  modelocarros.idModelo AS 'IdModelo', 
+    modelocarros.nombre AS 'NombreModelo', flotilla.anno AS 'Año', flotilla.cedula AS 'CedulaChofer', flotilla.consumoXkm AS 'ConsumoKM'
+    FROM flotilla
+    INNER JOIN modelocarros ON (modelocarros.idModelo = flotilla.idModelo)
+    INNER JOIN marcascarros ON (marcascarros.idMarcaCarro = modelocarros.idMarcaCarro)
+    WHERE modelocarros.idModelo = idModelo;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerVehiculoXModeloXMarca
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerVehiculoXModeloXMarca`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerVehiculoXModeloXMarca`(
+	idMarcaCarro INT,
+	idModelo INT
+)
+BEGIN
+
+	SELECT flotilla.placa AS 'Placa', marcascarros.idMarcaCarro AS 'IdMarca', marcascarros.nombre AS 'NombreMarca',  modelocarros.idModelo AS 'IdModelo', 
+    modelocarros.nombre AS 'NombreModelo', flotilla.anno AS 'Año', flotilla.cedula AS 'CedulaChofer', flotilla.consumoXkm AS 'ConsumoKM'
+    FROM flotilla
+    INNER JOIN modelocarros ON (modelocarros.idModelo = flotilla.idModelo)
+    INNER JOIN marcascarros ON (marcascarros.idMarcaCarro = modelocarros.idMarcaCarro)
+    WHERE marcascarros.idMarcaCarro = idMarcaCarro AND modelocarros.idModelo = idModelo;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarCompañia
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarCompañia`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarCompañia`(
+	nombre VARCHAR(50)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF NOT EXISTS(
+				  SELECT compania.idCompania
+				  FROM compania
+				  WHERE compania.nombre = nombre
+				 )
+		THEN
+			INSERT INTO compania(nombre) VALUES (nombre);
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarCompañia
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarCompañia`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarCompañia`(
+	idCompania INT,
+	nuevonombre VARCHAR(50)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE nombre VARCHAR(255);
+    
+    SET nombre = (SELECT compania.nombre FROM compania WHERE compania.idCompania = idCompania);
+    
+    SET nuevonombre = IFNULL(nuevonombre, nombre);
+    
+	IF EXISTS(
+				  SELECT compania.nombre
+				  FROM compania
+				  WHERE compania.idCompania = idCompania
+				 )
+		THEN
+			UPDATE compania SET compania.nombre = nuevonombre WHERE compania.idCompania = idCompania;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarCompañia
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarCompañia`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarCompañia`(
+	idCompania INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+    IF EXISTS(
+				  SELECT compania.nombre
+				  FROM compania
+				  WHERE compania.idCompania = idCompania
+				 )
+		THEN
+			DELETE FROM compania WHERE compania.idCompania = idCompania;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarUsuario
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarUsuario`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarUsuario`(
+	nombreUsuario VARCHAR(100),
+    contrasena VARCHAR(100),
+    admin BOOLEAN,
+    cedCliente INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF NOT EXISTS(
+				  SELECT usuarios.idUsuario
+				  FROM usuarios
+				  WHERE usuarios.nombreUsuario = nombreUsuario AND
+                  usuarios.contrasenaUsuario = contrasena
+				 )
+		THEN
+			INSERT INTO usuarios(nombreUsuario, contrasenaUsuario, idCliente, admin) 
+            VALUES (nombreUsuario, contrasena, cedCliente, admin);
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarUsuario
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarUsuario`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarUsuario`(
+	idUsuario INT,
+    nuevonombreUsuario VARCHAR(100),
+    nuevacontrasena VARCHAR(100),
+    nuevoadmin BOOLEAN
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE nombreUsuario VARCHAR(100);
+    DECLARE contrasenaUsuario VARCHAR(100);
+    DECLARE admin BOOLEAN;
+    
+    SET nombreUsuario = (SELECT usuarios.nombreUsuario FROM usuarios WHERE usuarios.idUsuario = idUsuario);
+    SET contrasenaUsuario = (SELECT usuarios.contraseñaUsuario FROM usuarios WHERE usuarios.idUsuario = idUsuario);
+    SET admin = (SELECT usuarios.admin FROM usuarios WHERE usuarios.idUsuario = idUsuario);
+    
+    SET nuevonombreUsuario = IFNULL(nuevonombreUsuario, nombreUsuario);
+    SET nuevacontrasena = IFNULL(nuevacontrasena, contrasenaUsuario);
+    SET nuevoadmin = IFNULL(nuevoadmin, admin);
+    
+	IF EXISTS(
+				  SELECT usuarios.nombreUsuario
+				  FROM usuarios
+				  WHERE usuarios.idUsuario = idUsuario
+				 )
+		THEN
+        
+			UPDATE usuarios SET usuarios.nombreUsuario = nombreUsuario, usuarios.contrasenaUsuario = nuevacontrasena,
+            usuarios.admin = nuevoadmin WHERE usuarios.idUsuario = idUsuario;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarUsuario
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarUsuario`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarUsuario`(
+	idUsuario INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS( SELECT usuarios.nombreUsuario
+				  FROM usuarios
+				  WHERE usuarios.idUsuario = idUsuario
+				 )
+		THEN
+        
+			DELETE FROM usuarios WHERE usuarios.idUsuario = idUsuario;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'La marca del carro que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerUsuarios
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerUsuarios`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerUsuarios`()
+BEGIN
+
+	SELECT usuarios.idUsuario, usuarios.idCliente, usuarios.nombreUsuario, usuarios.contrasenaUsuario, usuarios.admin
+    FROM usuarios;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerUsuario
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerUsuario`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerUsuario`(
+	usuario VARCHAR(100),
+    contrasena VARCHAR(100)
+)
+BEGIN
+
+	SELECT usuarios.idUsuario, usuarios.idCliente, usuarios.nombreUsuario, usuarios.contrasenaUsuario, usuarios.admin
+    FROM usuarios
+    WHERE usuarios.nombreUsuario = usuario AND usuarios.contrasenaUsuario = contrasena;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarTipoEmpleado
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarTipoEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarTipoEmpleado`(
+	nombre VARCHAR(50)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF NOT EXISTS(
+				  SELECT tipoempleado.idTipoEmpleado
+				  FROM tipoempleado
+				  WHERE tipoempleado.nombre = nombre
+				 )
+		THEN
+			INSERT INTO tipoempleado(nombre) VALUES (nombre);
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El tipo empleado que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarTipoEmpleado
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarTipoEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarTipoEmpleado`(
+	idTipoEmpleado INT,
+	nuevonombre VARCHAR(50)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE nombre VARCHAR(255);
+    
+    SET nombre = (SELECT tipoempleado.nombre FROM tipoempleado WHERE tipoempleado.idTipoEmpleado = idTipoEmpleado);
+    
+    SET nuevonombre = IFNULL(nuevonombre, nombre);
+    
+	IF EXISTS(
+				  SELECT tipoempleado.nombre
+				  FROM tipoempleado
+				  WHERE tipoempleado.idTipoEmpleado = idTipoEmpleado
+				 )
+		THEN
+			UPDATE tipoempleado SET tipoempleado.nombre = nuevonombre WHERE tipoempleado.idTipoEmpleado = idTipoEmpleado;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El tipo empleado no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarTipoEmpleado
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarTipoEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarTipoEmpleado`(
+	idTipoEmpleado INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(
+				  SELECT tipoempleado.nombre
+				  FROM tipoempleado
+				  WHERE tipoempleado.idTipoEmpleado = idTipoEmpleado
+				 )
+		THEN
+			DELETE FROM tipoempleado WHERE tipoempleado.idTipoEmpleado = idTipoEmpleado;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El tipo empleado no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerTiposEmpleado
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerTiposEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerTiposEmpleado`()
+BEGIN
+
+	SELECT tipoempleado.idTipoEmpleado, tipoempleado.nombre
+    FROM tipoempleado;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerTipoEmpleado
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerTipoEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerTipoEmpleado`(
+	idTipoEmpleado INT
+)
+BEGIN
+
+	SELECT tipoempleado.idTipoEmpleado, tipoempleado.nombre
+    FROM tipoempleado
+    WHERE tipoempleado.idTipoEmpleado = idTipoEmpleado;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarPasillo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarPasillo`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarPasillo`(
+	idDepartamento INT,
+	numero INT,
+    nombre VARCHAR(60)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF NOT EXISTS(
+				  SELECT pasillos.idPasillo
+				  FROM pasillos
+				  WHERE pasillos.nombre = nombre AND
+                  pasillos.numero = numero AND
+                  pasillos.idDepartamento = idDepartamento
+				 )
+		THEN
+			INSERT INTO pasillos(idDepartamento,numero,nombre)
+            VALUES(idDepartamento,numero, nombre);
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El pasillo que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarPasillo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarPasillo`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarPasillo`(
+	idPasillo INT,
+    nuevoidDepartamento INT,
+    nuevonumero INT,
+    nuevonombre VARCHAR(60)
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idDepartamento INT;
+    DECLARE numero INT;
+    DECLARE nombre VARCHAR(60);
+    
+    SET idDepartamento = (SELECT pasillos.idDepartamento FROM pasillos WHERE pasillos.idPasillo = idPasillo);
+    SET nombre = (SELECT pasillos.nombre FROM pasillos WHERE pasillos.idPasillo = idPasillo);
+    SET numero = (SELECT pasillos.numero FROM pasillos WHERE pasillos.idPasillo = idPasillo);
+    
+    SET nuevoidDepartamento = IFNULL(nuevoidDepartamento, idDepartamento);
+    SET nuevonombre = IFNULL(nuevonombre, nombre);
+    SET nuevonumero = IFNULL(nuevonumero, numero);
+    
+	IF EXISTS(
+				  SELECT pasillos.nombre
+				  FROM pasillos
+				  WHERE pasillos.idPasillo = idPasillo
+				 )
+		THEN
+        
+			UPDATE pasillos SET pasillos.nombre = nuevonombre, pasillos.numero = nuevonumero
+            WHERE pasillos.idPasillo = idPasillo;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El pasillo se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarPasillo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarPasillo`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarPasillo`(
+	idPasillo INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(
+				  SELECT pasillos.nombre
+				  FROM pasillos
+				  WHERE pasillos.idPasillo = idPasillo
+				 )
+		THEN
+        
+			DELETE FROM pasillos WHERE pasillos.idPasillo = idPasillo;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El pasillo se encuentra en el sistema.';
+	END IF;
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerPasillos
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerPasillos`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerPasillos`()
+BEGIN
+
+	SELECT pasillos.idPasillo, pasillos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.numero, pasillos.nombre
+    FROM pasillos
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerPasillo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerPasillo`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerPasillo`(
+	idPasillo INT
+)
+BEGIN
+
+	SELECT pasillos.idPasillo, pasillos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.numero, pasillos.nombre
+    FROM pasillos
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    WHERE pasillos.idPasillo = idPasillo;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerPasilloXDepartamento
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerPasilloXDepartamento`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerPasilloXDepartamento`(
+	idDepartamento INT
+)
+BEGIN
+
+	SELECT pasillos.idPasillo, pasillos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.numero, pasillos.nombre
+    FROM pasillos
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    WHERE pasillos.idDepartamento = idDepartamento;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarEstante
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarEstante`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarEstante`(
+    idPasillo INT,
+    cantidadEstantes INT,
+    pisos INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF NOT EXISTS(
+				  SELECT estantes.idEstante
+				  FROM estantes
+				  WHERE estantes.cantidadEstantes = cantidadEstantes AND
+                  estantes.pisos = pisos AND estantes.idPasillo = idPasillo
+				 )
+		THEN
+			INSERT INTO estantes(idPasillo, cantidadEstantes, pisos)
+			VALUES(idPasillo, cantidadEstantes, pisos);
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'El estante que desea ingresar ya se encuentra en el sistema.';
+        
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarEstante
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarEstante`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarEstante`(
+	idEstante INT,
+    nuevoidPasillo INT,
+    nuevacantidadEstantes INT,
+    nuevopisos INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idPasillo INT;
+    DECLARE cantidadEstantes INT;
+    DECLARE pisos INT;
+    
+    SET idPasillo = (SELECT estantes.idPasillo FROM estantes WHERE estantes.idEstante = idEstante);
+    SET pisos = (SELECT estantes.pisos FROM estantes WHERE estantes.idEstante = idEstante);
+    SET cantidadEstantes = (SELECT estantes.cantidadEstantes FROM estantes WHERE estantes.idEstante = idEstante);
+    
+    SET nuevoidPasillo = IFNULL(nuevoidPasillo, idPasillo);
+    SET nuevacantidadEstantes = IFNULL(nuevacantidadEstantes, cantidadEstantes);
+    SET nuevopisos = IFNULL(nuevopisos, pisos);
+    
+	IF EXISTS(
+				  SELECT estantes.pisos
+				  FROM estantes
+				  WHERE estantes.idEstante = idEstante
+				 )
+		THEN
+        
+			UPDATE estantes SET estantes.idPasillo = nuevoidPasillo, estantes.cantidadEstantes = nuevacantidadEstantes, estantes.pisos = nuevopisos
+            WHERE estantes.idEstante = idEstante;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El estante no se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarEstante
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarEstante`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarEstante`(
+	idEstante INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(
+				  SELECT estantes.pisos
+				  FROM estantes
+				  WHERE estantes.idEstante = idEstante
+				 )
+		THEN
+        
+			DELETE FROM estantes WHERE estantes.idEstante = idEstante;
+	ELSE
+        SIGNAL SQLSTATE '45000';
+		SET msgError = 'El estante no se encuentra en el sistema.';
+	END IF;
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstantes
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstantes`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstantes`()
+BEGIN
+
+	SELECT estantes.idEstante, estantes.idPasillo, pasillos.nombre AS 'NombrePasillo', pasillos.numero AS 'NumeroPasillo', 
+    estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstante
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstante`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstante`(
+	idEstante INT
+)
+BEGIN
+
+	SELECT estantes.idEstante, estantes.idPasillo, pasillos.nombre AS 'NombrePasillo', pasillos.numero AS 'NumeroPasillo', 
+    estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    WHERE estantes.idEstante = idEstante;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstantesXPasillo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstantesXPasillo`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstantesXPasillo`(
+	idPasillo INT
+)
+BEGIN
+
+	SELECT estantes.idEstante, estantes.idPasillo, pasillos.nombre AS 'NombrePasillo', pasillos.numero AS 'NumeroPasillo', 
+    estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    WHERE estantes.idPasillo = idPasillo;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerPasillosXEstante
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerPasillosXEstante`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerPasillosXEstante`(
+	idEstante INT
+)
+BEGIN
+
+	SELECT estantes.idPasillo, pasillos.nombre AS 'NombrePasillo', pasillos.numero AS 'NumeroPasillo', 
+    estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM pasillos
+    INNER JOIN estantes ON (estantes.idPasillo = pasillos.idPasillo)
+    WHERE estantes.idEstante = idEstante;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstantesXPasillosXDepartamentosXSedes
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstantesXPasillosXDepartamentosXSedes`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstantesXPasillosXDepartamentosXSedes`()
+BEGIN
+
+	SELECT sedes.idSede, sedes.nombre AS 'Sede', departamentos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'NombrePasillo', estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstanteXPasilloXDepartamentoXSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstanteXPasilloXDepartamentoXSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstanteXPasilloXDepartamentoXSede`(
+	idSede INT,
+    idDepartamento INT,
+    idPasillo INT,
+    idEstante INT
+)
+BEGIN
+
+	SELECT sedes.idSede, sedes.nombre AS 'Sede', departamentos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'NombrePasillo', estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE sedes.idSede = idSede AND departamentos.idDepartamento = idDepartamento AND pasillos.idPasillo = idPasillo AND estantes.idEstante = idEstante;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstantePasilloDepartamentoXSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstantePasilloDepartamentoXSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstantePasilloDepartamentoXSede`(
+	idSede INT
+)
+BEGIN
+
+	SELECT sedes.idSede, sedes.nombre AS 'Sede', departamentos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'NombrePasillo', estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE sedes.idSede = idSede;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstantePasilloSedeXDepartamento
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstantePasilloSedeXDepartamento`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstantePasilloSedeXDepartamento`(
+	idDepartamento INT
+)
+BEGIN
+
+	SELECT sedes.idSede, sedes.nombre AS 'Sede', departamentos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'NombrePasillo', estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE departamentos.idDepartamento = idDepartamento;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstanteDepartamentoSedeXPasillo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstanteDepartamentoSedeXPasillo`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstanteDepartamentoSedeXPasillo`(
+	idPasillo INT
+)
+BEGIN
+
+	SELECT sedes.idSede, sedes.nombre AS 'Sede', departamentos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'NombrePasillo', estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE pasillos.idPasillo = idPasillo;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerPasilloDepartamentoSedeXEstante
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerPasilloDepartamentoSedeXEstante`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerPasilloDepartamentoSedeXEstante`(
+	idEstante INT
+)
+BEGIN
+
+	SELECT sedes.idSede, sedes.nombre AS 'Sede', departamentos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'NombrePasillo', estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE estantes.idEstante = idEstante;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEstantePasilloXDepartamentoXSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstantePasilloXDepartamentoXSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstantePasilloXDepartamentoXSede`(
+	idSede INT,
+    idDepartamento INT
+)
+BEGIN
+
+	SELECT sedes.idSede, sedes.nombre AS 'Sede', departamentos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'NombrePasillo', estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE sedes.idSede = idSede AND departamentos.idDepartamento = idDepartamento;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerDepartamentoSedeXEstanteXPasillo
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEstantePasilloXDepartamentoXSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEstantePasilloXDepartamentoXSede`(
+	idEstante INT,
+    idPasillo INT
+)
+BEGIN
+
+	SELECT sedes.idSede, sedes.nombre AS 'Sede', departamentos.idDepartamento, departamentos.nombre AS 'Departamento', pasillos.idPasillo,
+    pasillos.numero AS 'NumeroPasillo', pasillos.nombre AS 'NombrePasillo', estantes.idEstante, estantes.cantidadEstantes, estantes.pisos
+    FROM estantes
+    INNER JOIN pasillos ON (pasillos.idPasillo = estantes.idPasillo)
+    INNER JOIN departamentos ON (departamentos.idDepartamento = pasillos.idDepartamento)
+    INNER JOIN sedes ON (sedes.idSede = departamentos.idSede)
+    WHERE estantes.idEstante = idEstante AND pasillos.idPasillo = idPasillo;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarVacaciones
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarVacaciones`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarVacaciones`(
+	cedEmpleado INT,
+    diasVacaciones INT,
+    fechaS DATE
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE fechaContratado DATE;
+    DECLARE fechaR DATE;
+    DECLARE dias INT;
+    
+	IF NOT EXISTS(
+				  SELECT vacacionesxempleado.idVxE
+				  FROM vacacionesxempleado
+				  WHERE vacacionesxempleado.cedEmpleado = cedEmpleado
+				 )
+		THEN
+			SET fechaContratado = (SELECT planillas.fechaContratado FROM planillas WHERE planillas.cedula = cedEmpleado);
+            
+            IF((DATEDIFF(CURDATE(),fechaContratado))/365 BETWEEN 5 AND 8)
+            THEN
+            
+				SET dias = diasVacaciones + 2;
+                SET fechaR = (SELECT fechaS - INTERVAL dias DAY);
+                
+				INSERT INTO vacacionesxempleado(cedEmpleado,diasVacaciones,fechaSalida,fechaRegreso)
+                VALUES(cedEmpleado,dias,fechaS,fechaR);
+                
+            ELSEIF((DATEDIFF(CURDATE(),fechaContratado))/365 BETWEEN 9 AND 12)
+            THEN
+				
+                SET dias = diasVacaciones + 4;
+                SET fechaR = (SELECT fechaS - INTERVAL dias DAY);
+                
+				INSERT INTO vacacionesxempleado(cedEmpleado,diasVacaciones,fechaSalida,fechaRegreso)
+                VALUES(cedEmpleado,dias,fechaS,fechaR);
+                
+			ELSE
+            
+                SET fechaR = (SELECT fechaS - INTERVAL diasVacaciones DAY);
+                
+				INSERT INTO vacacionesxempleado(cedEmpleado,diasVacaciones,fechaSalida,fechaRegreso)
+                VALUES(cedEmpleado,diasVacaciones,fechaS,fechaR);
+            END IF;
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'El empleado ya tiene vacaciones en el sistema.';
+        
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarVacaciones
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarVacaciones`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarVacaciones`(
+	cedEmpleado INT,
+    nuevodiasVacaciones INT,
+    nuevafechaS DATE
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE fechaSalida DATE;
+    DECLARE diasVacaciones INT;
+    DECLARE fechaRegreso DATE;
+    DECLARE fechaR DATE;
+    DECLARE fechaContratado DATE;
+    DECLARE dias INT;
+    
+    
+    SET fechaSalida = (SELECT vacacionesxempleado.fechaSalida FROM vacacionesxempleado WHERE vacacionesxempleado.cedEmpleado = cedEmpleado);
+    SET fechaRegreso = (SELECT vacacionesxempleado.fechaSalida FROM vacacionesxempleado WHERE vacacionesxempleado.cedEmpleado = cedEmpleado);
+    SET diasVacaciones = (SELECT vacacionesxempleado.diasVacaciones FROM vacacionesxempleado WHERE vacacionesxempleado.cedEmpleado = cedEmpleado);
+    
+    SET nuevodiasVacaciones = IFNULL(nuevodiasVacaciones, diasVacaciones);
+    SET nuevafechaS = IFNULL(nuevafechaS, fechaS);
+    
+	IF EXISTS(
+				  SELECT vacacionesxempleado.idVxE
+				  FROM vacacionesxempleado
+				  WHERE vacacionesxempleado.cedEmpleado = cedEmpleado
+				 )
+		THEN
+			SET fechaContratado = (SELECT planillas.fechaContratado FROM planillas WHERE planillas.cedula = cedEmpleado);
+            
+            IF((DATEDIFF(CURDATE(),fechaContratado))/365 BETWEEN 5 AND 8)
+            THEN
+            
+				SET dias = nuevosdiasVacaciones + 2;
+                SET fechaR = (SELECT nuevafechaS - INTERVAL dias DAY);
+                
+				UPDATE vacacionesxempleado SET vacacionesxempleado.diasVacaciones = dias, vacacionesxempleado.fechaSalida = nuevafechaS,
+                vacacionesxempleado.fechaRegreso = fechaR
+                WHERE vacacionesxempleado.cedEmpleado = cedEmpleado;
+                
+            ELSEIF((DATEDIFF(CURDATE(),fechaContratado))/365 BETWEEN 9 AND 12)
+            THEN
+				
+                SET dias = nuevosdiasVacaciones + 4;
+                SET fechaR = (SELECT nuevafechaS - INTERVAL dias DAY);
+                
+				UPDATE vacacionesxempleado SET vacacionesxempleado.diasVacaciones = dias, vacacionesxempleado.fechaSalida = nuevafechaS,
+                vacacionesxempleado.fechaRegreso = fechaR
+                WHERE vacacionesxempleado.cedEmpleado = cedEmpleado;
+                
+			ELSE
+            
+               SET fechaR = (SELECT nuevafechaS - INTERVAL dias DAY);
+                
+				UPDATE vacacionesxempleado SET vacacionesxempleado.diasVacaciones = nuevosdiasVacaciones, vacacionesxempleado.fechaSalida = nuevafechaS,
+                vacacionesxempleado.fechaRegreso = fechaR
+                WHERE vacacionesxempleado.cedEmpleado = cedEmpleado;
+                
+            END IF;
+			
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'El empleado no se encuentra en el sistema.';
+        
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarVacaciones
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarVacaciones`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarVacaciones`(
+	cedEmpleado INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(
+				  SELECT vacacionesxempleado.idVxE
+				  FROM vacacionesxempleado
+				  WHERE vacacionesxempleado.cedEmpleado = cedEmpleado
+				 )
+		THEN
+			
+            DELETE FROM vacacionesxempleado WHERE vacacionesxempleado.cedEmpleado = cedEmpleado;
+			
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'El empleado no se encuentra en el sistema.';
+        
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_FacturarPedido
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_FacturarPedido`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_FacturarPedido`(
+	cedCliente INT,
+    idPedido INT,
+    detalles TEXT,
+    numeroTarjetaCliente INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE montoTotal DOUBLE PRECISION;
+    DECLARE idFactura INT;
+    
+    SET montoTotal = (SELECT SUM((productosxpedidos.cantidadSolicitada)*productos.precioVenta)
+					  FROM productosxpedidos
+					  INNER JOIN productos ON (productos.idProducto = productosxpedidos.idProducto)
+					  INNER JOIN pedidos ON (pedidos.idPedido = productosxpedidos.idPedido)
+					  INNER JOIN sedes ON (sedes.idSede = pedidos.idSede) 
+                      WHERE productosxpedidos.idPedido = idPedido);
+    
+	IF (numeroTarjetaCliente != null)
+		THEN
+			INSERT INTO facturas(fechaFactura,cedCliente,idPedido,detalleFactura,montoTotal)
+            VALUES(CURDATE(),cedCliente,idPedido,detalles,montoTotal);
+            
+            SET idFactura = (SELECT LAST_INSERT_ID() FROM facturas LIMIT 1);
+            
+            INSERT INTO cobrofacturas(fechaCobro,idFactura,numeroTarjetaCliente)
+            VALUES(CURDATE(),idFactura,numeroTarjetaCliente);
+            
+	ELSE
+        INSERT INTO facturas(fechaFactura,cedCliente,idPedido,detalleFactura,montoTotal)
+		VALUES(CURDATE(),cedCliente,idPedido,detalles,montoTotal);
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_CobrarFactura
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_CobrarFactura`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_CobrarFactura`(
+    idFactura INT,
+    numeroTarjetaCliente INT
+)
+BEGIN
+    
+	INSERT INTO cobrofacturas(fechaCobro,idFactura,numeroTarjetaCliente)
+    VALUES(CURDATE(),idFactura,numeroTarjetaCliente);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarRuta
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarRuta`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarRuta`(
+	nombreSede VARCHAR(50),
+    puntoLlegada POINT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idSede INT;
+    
+    SET idSede = (SELECT sedes.idSede FROM sedes WHERE sedes.nombre = nombreSede);
+    
+	IF NOT EXISTS(
+				  SELECT rutas.idRuta
+				  FROM rutas
+				  WHERE rutas.puntoLlegada = puntoLlegada AND rutas.idSede = idSede
+				 )
+		THEN
+			INSERT INTO rutas(idSede, puntoLlegada)
+            VALUES(idSede, puntoLlegada);
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'La ruta que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarRuta
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarRuta`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarRuta`(
+	idRuta INT,
+	nuevoidSede VARCHAR(50),
+    nuevopuntoLlegada POINT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idSede INT;
+    DECLARE puntoLlegada POINT;
+    
+    SET idSede = (SELECT rutas.idSede FROM rutas WHERE rutas.idRuta = idRuta);
+    SET puntoLlegada = (SELECT rutas.puntoLlegada FROM rutas WHERE rutas.idRuta = idRuta);
+    
+    SET nuevoidSede = IFNULL(nuevoidSede, idSede);
+    SET nuevopuntoLlegada = IFNULL(nuevopuntoLlegada, puntoLlegada);
+    
+	IF EXISTS(
+				  SELECT rutas.puntoLlegada = puntoLlegada, rutas.idSede = idSede
+				  FROM rutas
+				  WHERE rutas.idRuta = idRuta
+				 )
+		THEN
+			UPDATE rutas SET rutas.idSede = nuevoidSede, rutas.puntoLlegada = nuevopuntoLlegada
+            WHERE rutas.idRuta = idRuta;
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'La ruta que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarRuta
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarRuta`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarRuta`(
+	idRuta INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(
+				  SELECT rutas.puntoLlegada = puntoLlegada, rutas.idSede = idSede
+				  FROM rutas
+				  WHERE rutas.idRuta = idRuta
+				 )
+		THEN
+			DELETE FROM rutas WHERE rutas.idRuta = idRuta;
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'La ruta que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerRutas
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerRutas`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerRutas`()
+BEGIN
+
+	SELECT rutas.idRuta, sedes.nombre AS 'NombreSede', rutas.puntoLlegada AS 'Llegada'
+    FROM rutas
+    INNER JOIN sedes ON (sedes.idSede = rutas.idSede);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerRuta
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerRuta`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerRuta`(
+	idRuta INT
+)
+BEGIN
+
+	SELECT rutas.idRuta, sedes.nombre AS 'NombreSede', rutas.puntoLlegada AS 'Llegada'
+    FROM rutas
+    INNER JOIN sedes ON (sedes.idSede = rutas.idSede)
+    WHERE rutas.idRuta = idRuta;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerRutasSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerRutasSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerRutasSede`(
+	nombreSede VARCHAR(50)
+)
+BEGIN
+
+	DECLARE idSede INT;
+    
+    SET idSede = (SELECT sedes.idSede FROM sedes WHERE sedes.nombre = nombreSede);
+
+	SELECT rutas.idRuta, sedes.nombre AS 'NombreSede', rutas.puntoLlegada AS 'Llegada'
+    FROM rutas
+    INNER JOIN sedes ON (sedes.idSede = rutas.idSede)
+    WHERE rutas.idSede = idSede;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarEnvio
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarEnvio`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarEnvio`(
+	nombreSede VARCHAR(50),
+    idPedido INT,
+    cantidadEnviada INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idSede INT;
+    DECLARE destino POINT;
+    
+    SET idSede = (SELECT sedes.idSede FROM sedes WHERE sedes.nombre = nombreSede);
+    SET destino = (SELECT clientes.ubicacion FROM pedidos 
+					INNER JOIN clientes ON (clientes.cedula = pedidos.cedCliente)
+                    WHERE pedidos.idPedido = idPedido);
+    
+	IF NOT EXISTS(
+				  SELECT envios.idEnvio
+				  FROM envios
+				  WHERE envios.idPedido = idPedido AND envios.destino = destino
+				 )
+		THEN
+			INSERT INTO envios(idSede,destino,idPedido,fechaEnvio,cantidadEnviada,vistoBueno)
+            VALUES(idSede,destino,idPedido,CURDATE(),cantidadEnviada,0);
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarEnvio
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarEnvio`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarEnvio`(
+	idEnvio INT,
+	nuevoidSede VARCHAR(50),
+    nuevoidPedido INT,
+    nuevacantidadEnviada INT,
+    nuevafechaEnvio DATE
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idSede INT;
+    DECLARE destino POINT;
+    DECLARE fechaEnvio DATE;
+    DECLARE idPedido INT;
+    DECLARE cantidadEnviada INT;
+    DECLARE nuevodestino POINT;
+    
+    SET idSede = (SELECT envios.idSede FROM envios WHERE envios.idEnvio = idEnvio);
+    SET destino = (SELECT envios.destino FROM envios WHERE envios.idEnvio = idEnvio);
+    SET idPedido = (SELECT envios.idPedido FROM envios WHERE envios.idEnvio = idEnvio);
+    SET fechaEnvio = (SELECT envios.fechaEnvio FROM envios WHERE envios.idEnvio = idEnvio);
+    SET cantidadEnviada = (SELECT envios.cantidadEnviada FROM envios WHERE envios.idEnvio = idEnvio);
+    
+    SET nuevodestino = (SELECT clientes.ubicacion FROM pedidos 
+					INNER JOIN clientes ON (clientes.cedula = pedidos.cedCliente)
+                    WHERE pedidos.idPedido = nuevoidPedido);
+                    
+	SET nuevoidSede = IFNULL(nuevoidSede, idSede);
+    SET nuevoidPedido = IFNULL(nuevoidPedido, idPedido);
+    SET nuevacantidadEnviada = IFNULL(nuevacantidadEnviada, cantidadEnviada);
+    SET nuevafechaEnvio = IFNULL(nuevafechaEnvio, fechaEnvio);
+    SET nuevodestino = IFNULL(nuevodestino, destino);
+    
+	IF EXISTS(
+				  SELECT envios.idPedido = idPedido AND envios.destino = destino
+				  FROM envios
+				  WHERE envios.idEnvio = idEnvio
+				 )
+		THEN
+			UPDATE envios SET envios.idSede = nuevoidSede, envios.destino = nuevodestino, envios.idPedido = nuevoidPedido,
+            envios.fechaEnvio = nuevafechaEnvio, envios.cantidadEnviada = nuevacantidadEnviada
+            WHERE envios.idEnvio = idEnvio;
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarEnvio
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarEnvio`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarEnvio`(
+	idEnvio INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(
+				  SELECT envios.idPedido = idPedido AND envios.destino = destino
+				  FROM envios
+				  WHERE envios.idEnvio = idEnvio
+				 )
+		THEN
+			DELETE FROM envios WHERE envios.idEnvio = idEnvio;
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEnvios
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEnvios`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEnvios`()
+BEGIN
+
+	SELECT envios.idEnvio, sedes.nombre AS 'Sede', envios.destino AS 'Destino', envios.idPedido as 'IdPedido', envios.cantidadEnviada AS 'CantidadEnviada'
+    FROM envios
+    INNER JOIN sedes ON (sedes.idSede = envios.idSede);
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEnvio
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEnvio`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEnvio`(
+	idEnvio INT
+)
+BEGIN
+
+	SELECT envios.idEnvio, sedes.nombre AS 'Sede', envios.destino AS 'Destino', envios.idPedido as 'IdPedido', envios.cantidadEnviada AS 'CantidadEnviada'
+    FROM envios
+    INNER JOIN sedes ON (sedes.idSede = envios.idSede)
+    WHERE envios.idEnvio = idEnvio;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEnviosXSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEnviosXSede`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEnviosXSede`(
+	idSede INT
+)
+BEGIN
+
+	SELECT envios.idEnvio, sedes.nombre AS 'Sede', envios.destino AS 'Destino', envios.idPedido as 'IdPedido', envios.cantidadEnviada AS 'CantidadEnviada'
+    FROM envios
+    INNER JOIN sedes ON (sedes.idSede = envios.idSede)
+    WHERE envios.idSede = idSede;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEnviosXPedido
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEnviosXPedido`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEnviosXPedido`(
+	idPedido INT
+)
+BEGIN
+
+	SELECT envios.idEnvio, sedes.nombre AS 'Sede', envios.destino AS 'Destino', envios.idPedido as 'IdPedido', envios.cantidadEnviada AS 'CantidadEnviada'
+    FROM envios
+    INNER JOIN sedes ON (sedes.idSede = envios.idSede)
+    WHERE envios.idPedido = idPedido;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarOrdenDespachos
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarOrdenDespachos`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarOrdenDespachos`(
+	idRuta INT,
+    cedEmpleado INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idSedeRuta INT;
+    DECLARE idSedeEmpleado INT;
+    
+    SET idSedeRuta = (SELECT rutas.idSede FROM rutas WHERE rutas.idRuta = idRuta);
+    SET idSedeEmpleado = (SELECT planillas.idSede FROM planillas WHERE planillas.cedula = cedEmpleado);
+    
+    IF(idSedeRuta = idSedeEmpleado)
+    THEN
+		IF NOT EXISTS(
+					  SELECT ordendespachos.idOrdenDespacho
+					  FROM ordendespachos
+					  WHERE ordendespachos.cedEmpleado = cedEmpleado AND ordendespachos.idRuta = idRuta
+					 )
+			THEN
+				INSERT INTO ordendespachos(idRuta,fecha,cedEmpleado)
+                VALUES(idRuta,CURDATE(),cedEmpleado);
+		ELSE
+		
+			SIGNAL SQLSTATE '45000';
+			SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+		END IF;
+	ELSE
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'Sede de ruta y empleado no coinciden.';
+    END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarOrdenDespacho
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarOrdenDespacho`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarOrdenDespacho`(
+	idOrdenDespacho INT,
+    nuevoidRuta INT,
+    nuevocedEmpleado INT,
+    nuevafecha DATE
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idRuta INT;
+    DECLARE cedEMpleado INT;
+    DECLARE fecha DATE;
+    
+    SET idRuta = (SELECT ordendespachos.idRuta FROM ordendespachos WHERE ordendespachos.idOrdenDespacho = idOrdenDespacho);
+    SET cedEmpleado = (SELECT ordendespachos.cedEmpleado FROM ordendespachos WHERE ordendespachos.idOrdenDespacho = idOrdenDespacho);
+    SET fecha = (SELECT ordendespachos.fecha FROM ordendespachos WHERE ordendespachos.idOrdenDespacho = idOrdenDespacho);
+    
+	SET nuevoidRuta = IFNULL(nuevoidRuta, idRuta);
+    SET nuevocedEmpleado = IFNULL(nuevocedEmpleado, cedEmpleado);
+    SET nuevafecha = IFNULL(nuevafecha, fecha);
+    
+	IF EXISTS(  SELECT ordendespachos.idRuta
+				  FROM ordendespachos
+				  WHERE ordendespachos.idOrdenDespacho = idOrdenDespacho
+				 )
+		THEN
+			UPDATE ordendespachos SET ordendespachos.idRuta = nuevoidRuta, ordendespachos.cedEmpleado = nuevocedEmpleado, ordendespachos.fecha = nuevafecha
+            WHERE ordendespachos.idOrdenDespacho = idOrdenDespacho;
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarOrdenDespacho
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarOrdenDespacho`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarOrdenDespacho`(
+	idOrdenDespacho INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+	IF EXISTS(  SELECT ordendespachos.idRuta
+				  FROM ordendespachos
+				  WHERE ordendespachos.idOrdenDespacho = idOrdenDespacho
+				 )
+		THEN
+			DELETE FROM ordendespachos WHERE ordendespachos.idOrdenDespacho = idOrdenDespacho;
+	ELSE
+    
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerOrdenesDespacho
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerOrdenesDespacho`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerOrdenesDespacho`()
+BEGIN
+
+	SELECT ordendespachos.idOrdenDespacho AS 'Id', rutas.idRuta AS 'IdRuta', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'Empleado', ordendespachos.fecha
+	FROM ordendespachos
+    INNER JOIN rutas ON (rutas.idRuta = ordendespachos.idRuta)
+    INNER JOIN planillas ON (planillas.cedula = ordendespachos.cedEmpleado);
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerOrdenesDespacho
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerOrdenesDespacho`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerOrdenesDespacho`(
+	idOrdenDespacho INT
+)
+BEGIN
+
+	SELECT ordendespachos.idOrdenDespacho AS 'Id', rutas.idRuta AS 'IdRuta', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'Empleado', ordendespachos.fecha
+	FROM ordendespachos
+    INNER JOIN rutas ON (rutas.idRuta = ordendespachos.idRuta)
+    INNER JOIN planillas ON (planillas.cedula = ordendespachos.cedEmpleado)
+    WHERE ordendespachos.idOrdenDespacho = idOrdenDespacho;
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerOrdenDespachoXRuta
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerOrdenDespachoXRuta`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerOrdenDespachoXRuta`(
+	idRuta INT
+)
+BEGIN
+
+	SELECT ordendespachos.idOrdenDespacho AS 'Id', rutas.idRuta AS 'IdRuta', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'Empleado', ordendespachos.fecha
+	FROM ordendespachos
+    INNER JOIN rutas ON (rutas.idRuta = ordendespachos.idRuta)
+    INNER JOIN planillas ON (planillas.cedula = ordendespachos.cedEmpleado)
+    WHERE ordendespachos.idRuta = idRuta;
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerOrdenDespachoXEmpleado
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerOrdenDespachoXEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerOrdenDespachoXEmpleado`(
+	cedEmpleado INT
+)
+BEGIN
+
+	SELECT ordendespachos.idOrdenDespacho AS 'Id', rutas.idRuta AS 'IdRuta', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'Empleado', ordendespachos.fecha
+	FROM ordendespachos
+    INNER JOIN rutas ON (rutas.idRuta = ordendespachos.idRuta)
+    INNER JOIN planillas ON (planillas.cedula = ordendespachos.cedEmpleado)
+    WHERE ordendespachos.cedEmpleado = cedEmpleado;
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerOrdenDespachoXSede
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerOrdenDespachoXEmpleado`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerOrdenDespachoXEmpleado`(
+	idSede INT
+)
+BEGIN
+
+	SELECT ordendespachos.idOrdenDespacho AS 'Id', rutas.idRuta AS 'IdRuta', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'Empleado', ordendespachos.fecha
+	FROM ordendespachos
+    INNER JOIN rutas ON (rutas.idRuta = ordendespachos.idRuta)
+    INNER JOIN planillas ON (planillas.cedula = ordendespachos.cedEmpleado)
+    WHERE rutas.idSede = idSede;
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_InsertarEnvioXOrdenDespacho
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_InsertarEnvioXOrdenDespacho`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_InsertarEnvioXOrdenDespacho`(
+	idEnvio INT,
+    idOrdenDespacho INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+    IF NOT EXISTS(
+					SELECT enviosxordendespacho.idExOd
+					FROM enviosxordendespacho
+					WHERE enviosxordendespacho.idEnvio = idEnvia AND
+                    enviosxordendespacho.idOrdenDespacho = idOrdenDespacho
+					)
+		THEN
+			INSERT INTO enviosxordendespacho(idOrdenDespacho,idEnvio)
+			VALUES(idOrdenDespacho,idEnvio);
+	ELSE
+	
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ModificarEnvioXOrdenDespacho
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ModificarEnvioXOrdenDespacho`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ModificarEnvioXOrdenDespacho`(
+	idExOd INT,
+	nuevoidEnvio INT,
+    nuevoidOrdenDespacho INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idEnvio INT;
+    DECLARE idOrdenDespacho INT;
+    
+    SET idEnvio = (SELECT enviosxordendespacho.idEnvio FROM enviosxordendespacho WHERE enviosxordendespacho.idExOd = idExOd);
+    SET idOrdenDespacho = (SELECT enviosxordendespacho.idOrdenDespacho FROM enviosxordendespacho WHERE enviosxordendespacho.idExOd = idExOd);
+    
+    SET nuevoidEnvio = IFNULL(nuevoidEnvio, idEnvio);
+    SET nuevoidOrdenDespacho = IFNULL(nuevoidOrdenDespacho, idOrdenDespacho);
+    
+    IF EXISTS(SELECT enviosxordendespacho.idEnvio 
+				  FROM enviosxordendespacho 
+                  WHERE enviosxordendespacho.idExOd = idExOd
+					)
+		THEN
+			UPDATE enviosxordendespacho SET enviosxordendespacho.idEnvio = nuevoidEnvio, enviosxordendespacho.idOrdenDespacho = nuevoidOrdenDespacho
+            WHERE enviosxordendespacho.idExOd = idExOd;
+	ELSE
+	
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EliminarEnvioXOrdenDespacho
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EliminarEnvioXOrdenDespacho`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EliminarEnvioXOrdenDespacho`(
+	idExOd INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    
+    IF EXISTS(SELECT enviosxordendespacho.idEnvio 
+				  FROM enviosxordendespacho 
+                  WHERE enviosxordendespacho.idExOd = idExOd
+					)
+		THEN
+			DELETE FROM enviosxordendespacho WHERE enviosxordendespacho.idExOd = idExOd;
+	ELSE
+	
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerEnvioXOrdenDespacho
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerEnvioXOrdenDespacho`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerEnvioXOrdenDespacho`()
+BEGIN
+
+	SELECT enviosxordendespacho.idExOd AS 'idExOd', ordendespachos.idOrdenDespacho AS 'IDOrdenDespacho', envios.idEnvio AS 'IdEnvio', pedidos.idPedido AS 'IdPedido', 
+    rutas.idRuta AS 'IdRuta'
+    FROM enviosxordendespacho
+    INNER JOIN ordendespachos ON (ordendespachos.idOrdenDespacho = enviosxordendespacho.idOrdenDespacho)
+    INNER JOIN envios ON (envios.idEnvio = enviosxordendespacho.idEnvio)
+    INNER JOIN pedidos ON (pedidos.idPedido = envios.idPedido)
+    INNER JOIN rutas ON (rutas.idRuta = ordendespachos.idRuta);
 
 END$$
 
@@ -2537,27 +5722,26 @@ DELIMITER $$
 USE `ferreteria`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerProductosxSedexDepartamento`(
 	nombreSede VARCHAR(50),
-    nombreDepartamento VARCHAR(50)
+    nombreDepartamento VARCHAR(50),
+    numeroPasillo INT,
+    nombrePasillo VARCHAR(50)
 )
 BEGIN
 
 	DECLARE fechaAnterior DATE;
     
-    SET fechaAnterior = (SELECT DATE_SUB(CURDATE(),INTERVAL 3 MONTH));
+    SET fechaAnterior = (SELECT DATE_SUB(CURDATE(),INTERVAL 1 MONTH));
 
-	SELECT COUNT(productosXpedidos.idPxP) AS 'CantidadVentido', sedes.nombre AS 'Sede', departamentos.nombre AS 'Departamento', marcas.nombre AS 'Marca', 
-    productos.idProducto AS 'IdProducto', productos.nombre AS 'NombreProducto', productos.descripcion AS 'DescripcionP', productos.utilidad AS 'UtilitdadP', 
-    productos.precio AS 'PrecioP', productos.precioVenta AS 'PrecioVenta', inventariosXsedes.cantidad AS 'Cantidad', inventariosXsedes.pasillo AS 'Pasillo', 
-    inventariosXsedes.estante AS 'Estante'
-    FROM sedes INNER JOIN departamentosXsedes ON (departamentosXsedes.idSede = sedes.idSede) 
-    INNER JOIN departamentos ON (departamentos.idDepartamento = departamentosXsedes.idDepartamento)
-    INNER JOIN inventariosXsedes ON (inventariosXsedes.idSede = sedes.idSede AND inventariosXsedes.idDepartamento = departamentos.idDepartamento)
-    INNER JOIN productos ON (productos.idProducto = inventariosXsedes.idProducto)
-    INNER JOIN marcas ON (marcas.idMarca = productos.idMarca)
-    INNER JOIN productosXpedidos ON (productosXpedidos.idProducto = productos.idProducto)
-    INNER JOIN pedidos ON (pedidos.idPedido = productosXpedidos.idPedido)
+	SELECT SUM(productosxpedidos.cantidadSolicitada) AS 'CantidadVentido', sedes.nombre AS 'NombreSede', 
+    departamentos.nombre AS 'NombreDepartamento', productos.idProducto AS 'IdProducto', productos.nombre AS 'NombreProducto'
+    FROM sedes 
+    INNER JOIN departamentosxsedes ON (departamentosxsedes.idSede = sedes.idSede)
+    INNER JOIN departamentos ON (departamentosxsedes.idDepartamento = departamentos.idDepartamento)
+    INNER JOIN inventariosxsedes ON (inventariosxsedes.idSede = departamentosxsedes.idSede)
+    INNER JOIN productos ON (productos.idProducto = inventariosxsedes.idProducto)
+    INNER JOIN productosxpedidos ON (productosxpedidos.idProducto = productos.idProducto)
     WHERE sedes.nombre = nombreSede AND departamentos.nombre = nombreDepartamento
-    AND (pedidos.fechaPedido BETWEEN fechaAnterior AND CURDATE());
+    GROUP BY productos.nombre;
 
 END$$
 
@@ -2624,15 +5808,14 @@ BEGIN
     
     SET primerdiaMes = (SELECT CURDATE() - INTERVAL (DAY(CURDATE())-1) DAY);
      
-    SELECT sedes.nombre AS 'Sede', (SUM(productosxpedidos.cantidadSolicitada)*productos.precioVenta) AS 'Garancia'
-    FROM sedes
-    INNER JOIN planillas ON (planillas.idSede = sedes.idSede)
-    INNER JOIN inventariosxsedes ON (inventariosxsedes.idSede = sedes.idSede)
-    INNER JOIN productos ON (productos.idProducto = inventariosxsedes.idProducto)
-    INNER JOIN productosXpedidos ON (productosXpedidos.idProducto = productos.idProducto)
-    INNER JOIN pedidos ON (pedidos.idPedido = productosXpedido.idPedido AND pedidos.cedEmpleado = planillas.cedula)
+    SELECT sedes.nombre AS 'Sede', SUM((productosxpedidos.cantidadSolicitada)*productos.precioVenta) AS 'Ganancia'
+    FROM productosxpedidos
+    INNER JOIN productos ON (productos.idProducto = productosxpedidos.idProducto)
+    INNER JOIN pedidos ON (pedidos.idPedido = productosxpedidos.idPedido)
+    INNER JOIN sedes ON (sedes.idSede = pedidos.idSede) 
     WHERE (pedidos.fechaPedido BETWEEN primerdiaMes AND CURDATE())
-    GROUP BY sedes.nombre;
+    GROUP BY sedes.nombre
+    ORDER BY 'Ganancia' ASC;
 
 END$$
 
@@ -2656,17 +5839,219 @@ BEGIN
     
     SET primerdiaMes = (SELECT CURDATE() - INTERVAL (DAY(CURDATE())-1) DAY);
      
-    SELECT CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreCompleto', (SUM(productosxpedidos.cantidadSolicitada)*productos.precioVenta) AS 'Garancia'
-    FROM productos
-    INNER JOIN productosXpedidos ON (productosXpedidos.idProducto = productos.idProducto)
-    INNER JOIN pedidos ON (pedidos.idPedido = productosXpedido.idPedido)
-    INNER JOIN planillas ON (planillas.cedula = pedidos.cedEmpleado)
-    WHERE (pedidos.fechaPedido BETWEEN primerdiaMes AND CURDATE())
-    ORDER BY CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM);
+    SELECT CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreCompleto', SUM((productosxpedidos.cantidadSolicitada)*productos.precioVenta) AS 'Garancia'
+    FROM productosxpedidos
+    INNER JOIN productos ON (productos.idProducto = productosxpedidos.idProducto)
+    INNER JOIN pedidos ON (pedidos.idPedido = productosxpedidos.idPedido)
+    INNER JOIN sedes ON (sedes.idSede = pedidos.idSede)
+    INNER JOIN planillas ON (planillas.idSede = sedes.idSede AND planillas.cedula = pedidos.cedEmpleado)
+    WHERE (pedidos.fechaPedido BETWEEN primerdiaMes AND CURDATE()) AND sedes.nombre = nombreSede AND planillas.estado = 1
+    GROUP BY CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM)
+    ORDER BY 'Ganancia' ASC;
+    
 
 END$$
 
 DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_SedeMasCercanaCliente
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_SedeMasCercanaCliente`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_SedeMasCercanaCliente`(
+	cedCliente INT
+)
+BEGIN
+	
+    SELECT sedes.nombre AS 'NombreSede', MIN(ST_DISTANCE(clientes.ubicacion, sedes.ubicacion)) AS 'DistanciaEnKM'
+    FROM sedes
+    INNER JOIN clientes ON (clientes.cedula = cedCliente)
+    ORDER BY 'DistanciaEnKM' ASC;
+    
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_DistanciaSedesCliente
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_DistanciaSedesCliente`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_DistanciaSedesCliente`(
+	cedCliente INT
+)
+BEGIN
+	
+    SELECT sedes.nombre AS 'NombreSede', (ST_DISTANCE(clientes.ubicacion, sedes.ubicacion)) AS 'DistanciaEnKM'
+    FROM sedes
+    INNER JOIN clientes ON (clientes.cedula = cedCliente)
+    ORDER BY 'DistanciaEnKM' ASC;
+    
+
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_ObtenerGananciasXRuta
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_ObtenerGananciasXRuta`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_ObtenerGananciasXRuta`()
+BEGIN
+
+	SELECT rutas.idRuta AS 'IdRuta', sedes.nombre AS 'Sede', rutas.puntoLlegada AS 'Llegada', SUM((productosxpedidos.cantidadSolicitada)*productos.precioVenta) AS 'Ganancia'
+	FROM rutas
+    INNER JOIN sedes ON (sedes.idSede = rutas.idSede)
+    INNER JOIN ordendespachos ON (ordendespachos.idRuta = rutas.idRuta)
+    INNER JOIN enviosxordendespacho ON (enviosxordendespacho.idOrdenDespacho = ordendespachos.idOrdenDespacho)
+    INNER JOIN envios ON (envios.idEnvio = enviosxordendespacho.idEnvio)
+    INNER JOIN pedidos ON (pedidos.idPedido = envios.idPedido)
+    INNER JOIN productosxpedidos ON (productosxpedidos.idPedido = pedidos.idPedido)
+    GROUP BY rutas.idRuta
+    ORDER BY 'Ganancia' ASC;
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_EntregaVistoBuenoCliente
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_EntregaVistoBuenoCliente`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_EntregaVistoBuenoCliente`(
+	cedCliente INT,
+    idEnvio INT,
+    vistoBueno INT
+)
+BEGIN
+
+	DECLARE msgError VARCHAR(255);
+    DECLARE idPedido INT;
+    DECLARE cantidadEnviada INT;
+    DECLARE cantidadPedido INT;
+    DECLARE faltante INT;
+    DECLARE ceCliente INT;
+    
+    IF EXISTS(SELECT envios.destino 
+				  FROM envios 
+                  WHERE envios.idEnvio = idEnvio
+                  )
+		THEN
+			
+            SET idPedido = (SELECT envios.idPedido FROM envios WHERE envios.idEnvio = idEnvio);
+            SET cantidadPedido = (SELECT productosxpedidos.cantidadSolicitada FROM productosxpedidos WHERE productosxpedidos.idPedido = idPedido);
+            SET ceCliente = (SELECT pedidos.cedCliente FROM pedidos WHERE pedidos.idPedido = idPedido);
+            SET cantidadEnviada = (SELECT envios.cantidadEnviada FROM envios WHERE envios.idEnvio = idEnvio);
+            
+            SET faltante = (cantidadSolicitada - cantidadEnviada);
+            
+			UPDATE envios SET envios.vistoBueno = vistoBueno
+            WHERE envios.idEnvio = idEnvio;
+            
+            UPDATE productosxpedidos SET productosxpedidos.cantidadRecibida = cantidadEnviada
+            WHERE productosxpedidos.idPedido = idPedido;
+            
+            IF(faltante > 0)
+            THEN
+				SELECT envios.idEnvio AS 'Envio', pedidos.idPedido AS 'Pedido', (productosxpedidos.cantidadSolicitada - envios.cantidadEnviada) AS 'Faltante'
+                FROM envios
+                INNER JOIN pedidos ON (pedidos.idPedido = envios.idPedido)
+                INNER JOIN productosxpedidos ON (productosxpedidos.idPedido = pedidos.idPedido)
+                WHERE envios.idEnvio = idEnvio;
+                
+			ELSE
+            
+				SET msgError = 'Se entregó toda la cantidad Solicitada';
+				SELECT envios.idEnvio AS 'Envio', pedidos.idPedido AS 'Pedido', msgError AS 'Faltante'
+                FROM envios
+                INNER JOIN pedidos ON (pedidos.idPedido = envios.idPedido)
+                INNER JOIN productosxpedidos ON (productosxpedidos.idPedido = pedidos.idPedido)
+                WHERE envios.idEnvio = idEnvio;
+            END IF;
+            
+	ELSE
+	
+		SIGNAL SQLSTATE '45000';
+		SET msgError = 'EL envio que desea ingresar ya se encuentra en el sistema.';
+	END IF;
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_AsignarKMRCarroGasolinaGastada
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_AsignarKMRCarroGasolinaGastada`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_AsignarKMRCarroGasolinaGastada`(
+  sede INT
+)
+BEGIN
+    
+    SELECT rutas.idRuta AS 'IdRuta', planillas.cedula AS 'CedEmpleado', CONCAT(planillas.nombre, ' ', planillas.apellidoP, ' ', planillas.apellidoM) AS 'NombreEmpleado',
+    flotilla.placa AS 'PlacaVehiculo', SUM(ST_DISTANCE(rutas.puntoLlegada, sedes.ubicacion)) AS 'DistanciaRcorrida', SUM((ST_DISTANCE(rutas.puntoLlegada, sedes.ubicacion))*flotilla.consumoXkm) AS 'ConsumoGasolina'
+    FROM enviosxordendespacho
+    INNER JOIN ordendespachos ON (ordendespachos.idOrdenDespacho = enviosxordendespacho.idOrdenDespacho)
+    INNER JOIN envios ON (envios.idEnvio = enviosxordendespacho.idEnvio)
+    INNER JOIN rutas ON (rutas.idRuta = ordendespachos.idRuta)
+    INNER JOIN sedes ON (sedes.idSede = rutas.idSede)
+    INNER JOIN planillas ON (planillas.cedula = ordendespachos.cedEmpleado AND planillas.idSede = sedes.idSede)
+    INNER JOIN flotilla ON (flotilla.cedula = planillas.cedula)
+    GROUP BY rutas.idRuta;
+    
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure usp_GastanMasGasolina
+-- -----------------------------------------------------
+
+USE `ferreteria`;
+DROP procedure IF EXISTS `ferreteria`.`usp_GastanMasGasolina`;
+
+DELIMITER $$
+USE `ferreteria`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `usp_GastanMasGasolina`(
+  sede INT
+)
+BEGIN
+    SELECT f.placa AS 'Placa', s.nombre AS 'Nombre', f.consumoXkm AS 'Consumo de litro por km.'
+    FROM flotilla f INNER JOIN
+         planillas p ON (f.cedula=p.cedula) INNER JOIN
+         sedes s ON(p.idSede=s.idSede)
+    WHERE s.idSede=IFNULL(sede,s.idSede)
+    GROUP BY 'Nombre'
+    ORDER BY 'Consumo de litro por km.' DESC;
+END$$
+
+DELIMITER ;
+
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
